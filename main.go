@@ -26,11 +26,11 @@ type measurement struct {
 func main() {
 	start := time.Now()
 	fmt.Println("Hello World")
-	parseFile()
+	run()
 	fmt.Printf("Time taken: %2f", time.Since(start).Seconds())
 }
 
-func parseFile() {
+func run() {
 	// First we need to read the file into an object
 	readFile, err := os.Open("../1brc-go/measurements.txt")
 	if err != nil {
