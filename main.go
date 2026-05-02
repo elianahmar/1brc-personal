@@ -40,7 +40,7 @@ func parseFile() {
 	fileScanner := bufio.NewScanner(readFile)
 	fileScanner.Split(bufio.ScanLines)
 
-	data := make(chan string)
+	data := make(chan string, 1000)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
@@ -49,6 +49,7 @@ func parseFile() {
 		for fileScanner.Scan() {
 			text := fileScanner.Text()
 			data <- text
+			// fmt.Printf("\n%d", lines)
 			lines -= 1
 			if lines <= 0 {
 				break
