@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,8 @@ type measurement struct {
 // - Read in the file line by line -> DONE
 // - Cities appear multiple times
 // - Implement the brute force solution first then track the time it takes
+// - I'm thinking here that I should process and push to a channel in two separate go routines
+//		since I can't allocate an array this big
 
 func main() {
 	start := time.Now()
@@ -29,7 +32,7 @@ func main() {
 
 func parseFile() {
 	// First we need to read the file into an object
-	readFile, err := os.Open("../measurements.txt")
+	readFile, err := os.Open("../1brc-go/measurements.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -37,18 +40,30 @@ func parseFile() {
 	fileScanner := bufio.NewScanner(readFile)
 	fileScanner.Split(bufio.ScanLines)
 
-	lines := 1000
-	data := make([]measurement, 0, 1000) // I can't even allocate an array of 1billion
-	for fileScanner.Scan() {
-		text := fileScanner.Text()
-		measurement := processLine(text)
-		fmt.Printf("%v\n", measurement)
-		data = append(data, measurement)
-		lines -= 1
-		if lines <= 0 {
-			break
+	data := make(chan string)
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		lines := 1000
+		for fileScanner.Scan() {
+			text := fileScanner.Text()
+			data <- text
+			lines -= 1
+			if lines <= 0 {
+				break
+			}
 		}
-	}
+	}()
+
+	go func(data chan string) {
+		defer wg.Done()
+		for text := range data {
+			measurement := processLine(text)
+			fmt.Printf("%v\n", measurement)
+		}
+	}(data)
+	close(data)
 	readFile.Close()
 }
 
