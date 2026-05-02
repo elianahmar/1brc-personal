@@ -54,6 +54,7 @@ func parseFile() {
 				break
 			}
 		}
+		close(data)
 	}()
 
 	go func(data chan string) {
@@ -63,7 +64,7 @@ func parseFile() {
 			fmt.Printf("%v\n", measurement)
 		}
 	}(data)
-	close(data)
+	wg.Wait()
 	readFile.Close()
 }
 
