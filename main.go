@@ -40,12 +40,12 @@ func run() {
 	fileScanner := bufio.NewScanner(readFile)
 	fileScanner.Split(bufio.ScanLines)
 
-	data := make(chan string, 1000)
+	data := make(chan string, 100000000)
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		lines := 1000
+		lines := 1000000
 		for fileScanner.Scan() {
 			text := fileScanner.Text()
 			data <- text
@@ -58,13 +58,19 @@ func run() {
 		close(data)
 	}()
 
-	go func(data chan string) {
-		defer wg.Done()
-		for text := range data {
-			measurement := processLine(text)
-			fmt.Printf("%v\n", measurement)
+	// go func(data chan string) {
+	// defer wg.Done()
+	measurements := make(map[string]float64)
+	for text := range data {
+		measurement := processLine(text)
+		split := strings.Split(text, ";")
+		if _, exists := measurements[measurement.city]; !exists {
+			measurements[split[0]] = 0.0
 		}
-	}(data)
+		measurements[split[0]] += measurement.temp
+		fmt.Printf("%v\n", measurement)
+	}
+	// }(data)
 	wg.Wait()
 	readFile.Close()
 }
