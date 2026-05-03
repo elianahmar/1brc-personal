@@ -17,17 +17,14 @@ type measurement struct {
 }
 
 // TODO:
-// - Read in the file line by line -> DONE
-// - Cities appear multiple times
 // - Implement the brute force solution first then track the time it takes
-// - I'm thinking here that I should process and push to a channel in two separate go routines
-//		since I can't allocate an array this big
 
 func main() {
 	start := time.Now()
 	fmt.Println("Hello World")
 	run()
 	fmt.Printf("Time taken: %2f", time.Since(start).Seconds())
+	// validateCorrectness()
 }
 
 func run() {
@@ -43,6 +40,7 @@ func run() {
 	data := make(chan string, 100000000)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
+	// NOTE: this is where we read the line and push the line string to channel
 	go func() {
 		defer wg.Done()
 		lines := 1000000
@@ -60,6 +58,7 @@ func run() {
 
 	// go func(data chan string) {
 	// defer wg.Done()
+	// NOTE: consume from the channel.
 	measurements := make(map[string]float64)
 	for text := range data {
 		measurement := processLine(text)

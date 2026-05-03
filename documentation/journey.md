@@ -7,3 +7,4 @@
 
 ## First day 5/3/26
 - To read 100 million lines it takes 91.58 seconds
+- added a validation method to ensure correctness at the end
