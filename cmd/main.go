@@ -56,19 +56,18 @@ func getMeasurements() map[city]model.Measurement {
 	// go func(data chan string) {
 	// defer wg.Done()
 	// NOTE: consume from the channel.
-	measurements := make(map[model.City]model.Measurement)
+	measurements := make(map[model.City]*model.Measurement)
 	for text := range data {
 		measurement := processLine(text)
 		split := strings.Split(text, ";")
 		city := model.City(split[0])
 		if _, exists := measurements[city]; !exists {
-			measurements[city] = model.Measurement{}
+			measurements[city] = &model.Measurement{}
 		}
 		measurements[city].Temps += measurement.Temps
 		measurements[city].Count += 1
 		fmt.Printf("%v\n", measurement)
 	}
-	// }(data)
 	wg.Wait()
 	readFile.Close()
 	return measurements
@@ -82,8 +81,8 @@ func processLine(text string) model.Measurement {
 	}
 	temp := truncateNaive(dig, 0.1) // No good. We don't need this much precision
 	return model.Measurement{
-		city: split[0],
-		temp: temp,
+		City:  split[0],
+		Temps: temp,
 	}
 }
 
