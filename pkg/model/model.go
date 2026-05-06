@@ -12,7 +12,7 @@ type Validation struct {
 type Measurement struct {
 	City  string
 	Temps float64
-	Count int
+	Count float64
 	Min   float64
 	Max   float64
 	Avg   float64

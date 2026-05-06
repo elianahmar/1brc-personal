@@ -1,38 +1,68 @@
 package preprocessor
 
 import (
+	"bufio"
 	"fmt"
-	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/throwea/1brc-go/pkg/model"
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-func ReadFile(path string) io.ReadCloser {
-	content, err := os.ReadFile(path)
-	utils.FatalError(err)
+// TODO: add command line args for testing purposes
+func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
+	file := utils.PanicOnError(os.Open(path))
+	defer file.Close()
+
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	data := make(chan string, chanSize)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	// NOTE: this is where we read the line and push the line string to channel
+	go func() {
+		defer wg.Done()
+		lines := chanSize
+		for fileScanner.Scan() {
+			text := fileScanner.Text()
+			data <- text
+			lines -= 1
+			if lines <= 0 {
+				break
+			}
+		}
+		close(data)
+	}()
+	measurements := collectData(data)
+	wg.Wait()
+	return measurements
 }
 
-func CollectData(data chan string) map[model.City]*model.Measurement {
+func collectData(data chan string) map[model.City]*model.Measurement {
 	measurements := make(map[model.City]*model.Measurement)
 	for text := range data {
-		measurement := ProcessLine(text)
+		measurement := processLine(text)
 		split := strings.Split(text, ";")
 		city := model.City(split[0])
 		if _, exists := measurements[city]; !exists {
 			measurements[city] = &model.Measurement{}
 		}
-		measurements[city].Temps += measurement.Temps
+		newTemp := measurement.Temps
+		measurements[city].Temps += newTemp
 		measurements[city].Count += 1
+		measurements[city].Max = math.Max(measurements[city].Max, newTemp)
+		measurements[city].Min = math.Min(measurements[city].Min, newTemp)
 		fmt.Printf("%v\n", measurement)
 	}
 	return measurements
 }
 
-func ProcessLine(text string) model.Measurement {
+func processLine(text string) model.Measurement {
 	split := strings.Split(text, ";")
 	dig, err := strconv.ParseFloat(split[1], 64)
 	if err != nil {
