@@ -27,10 +27,10 @@ func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
 		}
 		// utils.PanicOnCondition(!exists, fmt.Sprintf("no data for city: %s", city))
 
-		errs := validateNumbers(predicted, parsedMin, parsedAvg, parsedMax)
+		errs, minMiss, maxMiss, avgMiss := validateNumbers(predicted, parsedMin, parsedAvg, parsedMax)
 		// utils.PanicOnCondition(len(errs) > 0, collectErrs(errs))
 		if len(errs) > 0 {
-			fmt.Println(collectErrs(errs))
+			fmt.Println(collectErrs(errs, minMiss, maxMiss, avgMiss))
 		}
 	}
 }
@@ -47,24 +47,30 @@ func convertTemperatures(temps string) (float64, float64, float64) {
 	return parsedMin, parsedAvg, parsedMax
 }
 
-func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedMax float64) []error {
+func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedMax float64) ([]error, int, int, int) {
 	errs := make([]error, 0)
+	minMiss, maxMiss, avgMiss := 0, 0, 0
 	if predicted.Min != parsedMin {
+		minMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Min = %2f, actual = %2f, city = %v", predicted.Min, parsedMin, predicted.City))
 	}
 	if predicted.Avg != parsedAvg {
+		maxMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Avg = %2f, actual = %2f, city = %v", predicted.Avg, parsedAvg, predicted.City))
 	}
 	if predicted.Max != parsedMax {
+		avgMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Max = %2f, actual = %2f, city = %v", predicted.Max, parsedMax, predicted.City))
 	}
-	return errs
+	return errs, minMiss, maxMiss, avgMiss
 }
 
-func collectErrs(errs []error) string {
+func collectErrs(errs []error, minMiss, maxMiss, avgMiss int) string {
 	result := strings.Builder{}
 	for _, err := range errs {
 		utils.PanicOnError(result.WriteString(err.Error() + "\n"))
 	}
+	totalMisses := minMiss + maxMiss + avgMiss
+	utils.PanicOnError(fmt.Fprintf(&result, "Total Misses: %d, Min misses: %d, Max misses: %d, Avg misses: %d\n", totalMisses, minMiss, maxMiss, avgMiss))
 	return result.String()
 }
