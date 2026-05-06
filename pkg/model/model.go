@@ -1,5 +1,7 @@
 package model
 
+type City string
+
 type Validation struct {
 	Min float64
 	Max float64

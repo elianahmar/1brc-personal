@@ -9,9 +9,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-)
 
-type city string
+	"github.com/throwea/1brc-go/pkg/model"
+)
 
 // TODO:
 // - Implement the brute force solution first then track the time it takes
@@ -24,7 +24,7 @@ func main() {
 	validateCorrectness(measurements)
 }
 
-func getMeasurements() map[city]model.measurement {
+func getMeasurements() map[city]model.Measurement {
 	// First we need to read the file into an object
 	readFile, err := os.Open("../1brc-go/measurements.txt")
 	if err != nil {
@@ -56,16 +56,16 @@ func getMeasurements() map[city]model.measurement {
 	// go func(data chan string) {
 	// defer wg.Done()
 	// NOTE: consume from the channel.
-	measurements := make(map[city]measurement)
+	measurements := make(map[model.City]model.Measurement)
 	for text := range data {
 		measurement := processLine(text)
 		split := strings.Split(text, ";")
-		city := city(split[0])
+		city := model.City(split[0])
 		if _, exists := measurements[city]; !exists {
-			measurements[city] = measurement{}
+			measurements[city] = model.Measurement{}
 		}
-		measurements[split[0]] += measurement.temp
-		measurements[split[0]] += 1.0
+		measurements[city].Temps += measurement.Temps
+		measurements[city].Count += 1
 		fmt.Printf("%v\n", measurement)
 	}
 	// }(data)
@@ -74,14 +74,14 @@ func getMeasurements() map[city]model.measurement {
 	return measurements
 }
 
-func processLine(text string) measurement {
+func processLine(text string) model.Measurement {
 	split := strings.Split(text, ";")
 	dig, err := strconv.ParseFloat(split[1], 64)
 	if err != nil {
 		panic(err)
 	}
 	temp := truncateNaive(dig, 0.1) // No good. We don't need this much precision
-	return measurement{
+	return model.Measurement{
 		city: split[0],
 		temp: temp,
 	}
