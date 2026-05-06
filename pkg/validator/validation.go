@@ -13,7 +13,14 @@ import (
 )
 
 func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
-	var validation map[string]interface{}
+	var (
+		validation     map[string]interface{}
+		totalMinMisses int
+		totalMaxMisses int
+		totalAvgMisses int
+		citiesPassed   int
+		citiesFailed   int
+	)
 	content := utils.PanicOnError(os.ReadFile("./validation.json"))
 
 	utils.PanicOnError(struct{}{}, json.Unmarshal(content, &validation))
@@ -27,12 +34,23 @@ func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
 		}
 		// utils.PanicOnCondition(!exists, fmt.Sprintf("no data for city: %s", city))
 
-		errs := validateNumbers(predicted, parsedMin, parsedAvg, parsedMax)
+		errs, minMiss, maxMiss, avgMiss := validateNumbers(predicted, parsedMin, parsedAvg, parsedMax)
+		totalMinMisses += minMiss
+		totalMaxMisses += maxMiss
+		totalAvgMisses += avgMiss
+
 		// utils.PanicOnCondition(len(errs) > 0, collectErrs(errs))
-		if len(errs) > 0 {
-			fmt.Println(collectErrs(errs))
+		if len(errs) == 0 {
+			citiesPassed += 1
+			continue
 		}
+		citiesFailed += 1
+		fmt.Println(collectErrs(errs))
 	}
+
+	totalMisses := totalMinMisses + totalMaxMisses + totalAvgMisses
+	fmt.Printf("Total Misses: %d, Min misses: %d, Max misses: %d, Avg misses: %d\n", totalMisses, totalMinMisses, totalMaxMisses, totalAvgMisses)
+	fmt.Printf("Cities Processed: %d, Cities Passed: %d, Cities Failed: %d\n", len(measurements), citiesPassed, citiesFailed)
 }
 
 func convertTemperatures(temps string) (float64, float64, float64) {
@@ -47,18 +65,22 @@ func convertTemperatures(temps string) (float64, float64, float64) {
 	return parsedMin, parsedAvg, parsedMax
 }
 
-func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedMax float64) []error {
+func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedMax float64) ([]error, int, int, int) {
 	errs := make([]error, 0)
+	minMiss, maxMiss, avgMiss := 0, 0, 0
 	if predicted.Min != parsedMin {
+		minMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Min = %2f, actual = %2f, city = %v", predicted.Min, parsedMin, predicted.City))
 	}
 	if predicted.Avg != parsedAvg {
+		maxMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Avg = %2f, actual = %2f, city = %v", predicted.Avg, parsedAvg, predicted.City))
 	}
 	if predicted.Max != parsedMax {
+		avgMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Max = %2f, actual = %2f, city = %v", predicted.Max, parsedMax, predicted.City))
 	}
-	return errs
+	return errs, minMiss, maxMiss, avgMiss
 }
 
 func collectErrs(errs []error) string {
