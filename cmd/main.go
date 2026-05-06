@@ -11,10 +11,7 @@ import (
 	"time"
 )
 
-type measurement struct {
-	city string
-	temp float64
-}
+type city string
 
 // TODO:
 // - Implement the brute force solution first then track the time it takes
@@ -22,12 +19,12 @@ type measurement struct {
 func main() {
 	start := time.Now()
 	fmt.Println("Hello World")
-	run()
+	measurements := getMeasurements()
 	fmt.Printf("Time taken: %2f", time.Since(start).Seconds())
-	// validateCorrectness()
+	validateCorrectness(measurements)
 }
 
-func run() {
+func getMeasurements() map[city]model.measurement {
 	// First we need to read the file into an object
 	readFile, err := os.Open("../1brc-go/measurements.txt")
 	if err != nil {
@@ -59,19 +56,22 @@ func run() {
 	// go func(data chan string) {
 	// defer wg.Done()
 	// NOTE: consume from the channel.
-	measurements := make(map[string]float64)
+	measurements := make(map[city]measurement)
 	for text := range data {
 		measurement := processLine(text)
 		split := strings.Split(text, ";")
-		if _, exists := measurements[measurement.city]; !exists {
-			measurements[split[0]] = 0.0
+		city := city(split[0])
+		if _, exists := measurements[city]; !exists {
+			measurements[city] = measurement{}
 		}
 		measurements[split[0]] += measurement.temp
+		measurements[split[0]] += 1.0
 		fmt.Printf("%v\n", measurement)
 	}
 	// }(data)
 	wg.Wait()
 	readFile.Close()
+	return measurements
 }
 
 func processLine(text string) measurement {

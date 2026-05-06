@@ -8,16 +8,8 @@ import (
 	"strings"
 )
 
-type Validation struct {
-	City   string
-	Values string
-	Min    float64
-	Max    float64
-	Avg    float64
-}
-
-func validateCorrectness(weatherObj map[string]Validation) {
-	var validation map[string]string
+func validateCorrectness(measurements map[city]measurement) {
+	var validation map[city]measurement
 	content, err := os.ReadFile("./validation.json")
 	if err != nil {
 		panic(err)
@@ -26,9 +18,9 @@ func validateCorrectness(weatherObj map[string]Validation) {
 	if err := json.Unmarshal(content, &validation); err != nil {
 		panic(err)
 	}
-	for city, temps := range validation {
+	for city, temps := range measurements {
 		parsedMin, parsedAvg, parsedMax := convertTemperatures(temps)
-		predicted, exists := weatherObj[city]
+		predicted, exists := measurements[city]
 		if !exists {
 			panic(fmt.Errorf("no data for city: %s", city))
 		}
