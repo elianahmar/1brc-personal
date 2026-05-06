@@ -16,5 +16,5 @@
 - I refactored the heck out of the code
 - Code is ready to run. Time to get a baseline
 - When running the application I'm seeing that memory from activity monitor reached as high as 38GB
-- Got a baseline of 473 seconds
+- Got a baseline of 473 seconds (7.88 minutes)
 - I noticed I'm off by .1. Specifically I'm predicting .1 under for all of the misses across min, max, and avg
