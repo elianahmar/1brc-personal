@@ -6,6 +6,7 @@ import (
 
 	"github.com/throwea/1brc-go/pkg/compute"
 	pre "github.com/throwea/1brc-go/pkg/preprocessor"
+	"github.com/throwea/1brc-go/pkg/validator"
 )
 
 // TODO:
@@ -21,4 +22,6 @@ func runCalculations() {
 	measurements := pre.ReadFile("../../1brc-go/measurements.txt", 100000000)
 
 	compute.ComputeAvg(measurements)
+
+	validator.ValidateCorrectness(measurements)
 }
