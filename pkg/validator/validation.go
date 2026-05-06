@@ -13,7 +13,14 @@ import (
 )
 
 func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
-	var validation map[string]interface{}
+	var (
+		validation     map[string]interface{}
+		totalMinMisses int
+		totalMaxMisses int
+		totalAvgMisses int
+		citiesPassed   int
+		citiesFailed   int
+	)
 	content := utils.PanicOnError(os.ReadFile("./validation.json"))
 
 	utils.PanicOnError(struct{}{}, json.Unmarshal(content, &validation))
@@ -28,11 +35,22 @@ func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
 		// utils.PanicOnCondition(!exists, fmt.Sprintf("no data for city: %s", city))
 
 		errs, minMiss, maxMiss, avgMiss := validateNumbers(predicted, parsedMin, parsedAvg, parsedMax)
+		totalMinMisses += minMiss
+		totalMaxMisses += maxMiss
+		totalAvgMisses += avgMiss
+
 		// utils.PanicOnCondition(len(errs) > 0, collectErrs(errs))
-		if len(errs) > 0 {
-			fmt.Println(collectErrs(errs, minMiss, maxMiss, avgMiss))
+		if len(errs) == 0 {
+			citiesPassed += 1
+			continue
 		}
+		citiesFailed += 1
+		fmt.Println(collectErrs(errs))
 	}
+
+	totalMisses := totalMinMisses + totalMaxMisses + totalAvgMisses
+	fmt.Printf("Total Misses: %d, Min misses: %d, Max misses: %d, Avg misses: %d\n", totalMisses, totalMinMisses, totalMaxMisses, totalAvgMisses)
+	fmt.Printf("Cities Processed: %d, Cities Passed: %d, Cities Failed: %d\n", len(measurements), citiesPassed, citiesFailed)
 }
 
 func convertTemperatures(temps string) (float64, float64, float64) {
@@ -65,12 +83,10 @@ func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedM
 	return errs, minMiss, maxMiss, avgMiss
 }
 
-func collectErrs(errs []error, minMiss, maxMiss, avgMiss int) string {
+func collectErrs(errs []error) string {
 	result := strings.Builder{}
 	for _, err := range errs {
 		utils.PanicOnError(result.WriteString(err.Error() + "\n"))
 	}
-	totalMisses := minMiss + maxMiss + avgMiss
-	utils.PanicOnError(fmt.Fprintf(&result, "Total Misses: %d, Min misses: %d, Max misses: %d, Avg misses: %d\n", totalMisses, minMiss, maxMiss, avgMiss))
 	return result.String()
 }
