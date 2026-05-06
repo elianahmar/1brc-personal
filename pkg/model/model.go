@@ -3,9 +3,10 @@ package model
 type City string
 
 type Validation struct {
-	Min float64
-	Max float64
-	Avg float64
+	City string
+	Min  float64
+	Max  float64
+	Avg  float64
 }
 
 type Measurement struct {

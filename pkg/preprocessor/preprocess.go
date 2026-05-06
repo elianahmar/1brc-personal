@@ -9,10 +9,10 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-func collectData(data chan string) {
+func CollectData(data chan string) map[model.City]*model.Measurement {
 	measurements := make(map[model.City]*model.Measurement)
 	for text := range data {
-		measurement := processLine(text)
+		measurement := ProcessLine(text)
 		split := strings.Split(text, ";")
 		city := model.City(split[0])
 		if _, exists := measurements[city]; !exists {
@@ -22,11 +22,10 @@ func collectData(data chan string) {
 		measurements[city].Count += 1
 		fmt.Printf("%v\n", measurement)
 	}
+	return measurements
 }
 
-// }(data)
-
-func processLine(text string) model.Measurement {
+func ProcessLine(text string) model.Measurement {
 	split := strings.Split(text, ";")
 	dig, err := strconv.ParseFloat(split[1], 64)
 	if err != nil {

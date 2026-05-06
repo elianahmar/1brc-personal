@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/throwea/1brc-go/pkg/model"
+	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-func validateCorrectness(measurements map[city]model.measurement) {
-	var validation map[city]model.Measurement
+func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
+	var validation map[model.City]string
 	content, err := os.ReadFile("./validation.json")
 	if err != nil {
 		panic(err)
@@ -20,7 +21,7 @@ func validateCorrectness(measurements map[city]model.measurement) {
 	if err := json.Unmarshal(content, &validation); err != nil {
 		panic(err)
 	}
-	for city, temps := range measurements {
+	for city, temps := range validation { // NOTE: don't think this is right?
 		parsedMin, parsedAvg, parsedMax := convertTemperatures(temps)
 		predicted, exists := measurements[city]
 		if !exists {
@@ -39,13 +40,13 @@ func convertTemperatures(temps string) (float64, float64, float64) {
 	minActual, _ := strconv.ParseFloat(values[0], 32)
 	avgActual, _ := strconv.ParseFloat(values[1], 32)
 	maxActual, _ := strconv.ParseFloat(values[2], 32)
-	parsedMin := truncateNaive(minActual, 0.1)
-	parsedAvg := truncateNaive(avgActual, 0.1)
-	parsedMax := truncateNaive(maxActual, 0.1)
+	parsedMin := utils.TruncateNaive(minActual, 0.1)
+	parsedAvg := utils.TruncateNaive(avgActual, 0.1)
+	parsedMax := utils.TruncateNaive(maxActual, 0.1)
 	return parsedMin, parsedAvg, parsedMax
 }
 
-func validateNumbers(predicted Validation, parsedMin, parsedAvg, parsedMax float64) []error {
+func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedMax float64) []error {
 	errs := make([]error, 0)
 	if predicted.Min != parsedMin {
 		errs = append(errs, fmt.Errorf("min value for city: %s doesn't match", predicted.City))

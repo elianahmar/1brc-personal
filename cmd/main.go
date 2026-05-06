@@ -3,14 +3,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/throwea/1brc-go/pkg/model"
+	pre "github.com/throwea/1brc-go/pkg/preprocessor"
 )
 
 // TODO:
@@ -24,7 +23,7 @@ func main() {
 	validateCorrectness(measurements)
 }
 
-func getMeasurements() map[city]model.Measurement {
+func getMeasurements() map[model.City]*model.Measurement {
 	// First we need to read the file into an object
 	readFile, err := os.Open("../1brc-go/measurements.txt")
 	if err != nil {
@@ -58,7 +57,7 @@ func getMeasurements() map[city]model.Measurement {
 	// NOTE: consume from the channel.
 	measurements := make(map[model.City]*model.Measurement)
 	for text := range data {
-		measurement := processLine(text)
+		measurement := pre.ProcessLine(text)
 		split := strings.Split(text, ";")
 		city := model.City(split[0])
 		if _, exists := measurements[city]; !exists {
@@ -71,21 +70,4 @@ func getMeasurements() map[city]model.Measurement {
 	wg.Wait()
 	readFile.Close()
 	return measurements
-}
-
-func processLine(text string) model.Measurement {
-	split := strings.Split(text, ";")
-	dig, err := strconv.ParseFloat(split[1], 64)
-	if err != nil {
-		panic(err)
-	}
-	temp := truncateNaive(dig, 0.1) // No good. We don't need this much precision
-	return model.Measurement{
-		City:  split[0],
-		Temps: temp,
-	}
-}
-
-func truncateNaive(f float64, unit float64) float64 {
-	return math.Trunc(f/unit) * unit
 }
