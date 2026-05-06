@@ -10,7 +10,7 @@ type Validation struct {
 }
 
 type Measurement struct {
-	City  string
+	City  City
 	Temps float64
 	Count float64
 	Min   float64

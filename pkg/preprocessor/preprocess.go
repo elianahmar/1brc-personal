@@ -13,7 +13,6 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-// TODO: add command line args for testing purposes
 func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	file := utils.PanicOnError(os.Open(path))
 	defer file.Close()
@@ -46,31 +45,24 @@ func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 func collectData(data chan string) map[model.City]*model.Measurement {
 	measurements := make(map[model.City]*model.Measurement)
 	for text := range data {
-		measurement := processLine(text)
-		split := strings.Split(text, ";")
-		city := model.City(split[0])
+		city, temp := processLine(text)
+
 		if _, exists := measurements[city]; !exists {
 			measurements[city] = &model.Measurement{}
 		}
-		newTemp := measurement.Temps
-		measurements[city].Temps += newTemp
+		measurements[city].Temps += temp
 		measurements[city].Count += 1
-		measurements[city].Max = math.Max(measurements[city].Max, newTemp)
-		measurements[city].Min = math.Min(measurements[city].Min, newTemp)
-		fmt.Printf("%v\n", measurement)
+		measurements[city].Max = math.Max(measurements[city].Max, temp)
+		measurements[city].Min = math.Min(measurements[city].Min, temp)
+		// NOTE: Max and Min are coming as zero
+		fmt.Printf("%v\n", measurements[city])
 	}
 	return measurements
 }
 
-func processLine(text string) model.Measurement {
+func processLine(text string) (model.City, float64) {
 	split := strings.Split(text, ";")
-	dig, err := strconv.ParseFloat(split[1], 64)
-	if err != nil {
-		panic(err)
-	}
+	dig := utils.PanicOnError(strconv.ParseFloat(split[1], 64))
 	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
-	return model.Measurement{
-		City:  split[0],
-		Temps: temp,
-	}
+	return model.City(split[0]), temp
 }

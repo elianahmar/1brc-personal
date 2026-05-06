@@ -11,6 +11,7 @@ import (
 
 // TODO:
 // - No matter how slow, get a working solution to have a baseline
+// - Optional. Add some command line args for channel size
 
 func main() {
 	start := time.Now()
@@ -19,7 +20,7 @@ func main() {
 }
 
 func runCalculations() {
-	measurements := pre.ReadFile("../../1brc-go/measurements.txt", 100000000)
+	measurements := pre.ReadFile("../1brc-go/measurements.txt", 100000000)
 
 	compute.ComputeAvg(measurements)
 
