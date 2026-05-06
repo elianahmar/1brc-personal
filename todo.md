@@ -4,6 +4,8 @@
 3. Optimize, Optimize, Optimize
 4. Aim for under 15 seconds
 
+- I need to disable copilot by default when using neovim. Copilot LSP is using gigs of memory
+
 
 ### Constraints
 - Can only use std library packages

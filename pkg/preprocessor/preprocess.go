@@ -47,7 +47,7 @@ func collectData(data chan string) map[model.City]*model.Measurement {
 		city, temp := processLine(text)
 
 		if _, exists := measurements[city]; !exists {
-			measurements[city] = &model.Measurement{}
+			measurements[city] = &model.Measurement{City: city}
 		}
 		measurements[city].Temps += temp
 		measurements[city].Count += 1

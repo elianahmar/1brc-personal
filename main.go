@@ -20,7 +20,7 @@ func main() {
 }
 
 func runCalculations() {
-	measurements := pre.ReadFile("../1brc-go/measurements.txt", 1000)
+	measurements := pre.ReadFile("../1brc-go/measurements.txt", 1000000000)
 
 	compute.ComputeAvg(measurements)
 

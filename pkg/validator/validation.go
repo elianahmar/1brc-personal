@@ -13,15 +13,15 @@ import (
 )
 
 func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
-	var validation map[model.City]string
+	var validation map[string]interface{}
 	content := utils.PanicOnError(os.ReadFile("./validation.json"))
 
 	utils.PanicOnError(struct{}{}, json.Unmarshal(content, &validation))
 
 	for city, temps := range validation { // NOTE: don't think this is right?
-		parsedMin, parsedAvg, parsedMax := convertTemperatures(temps)
+		parsedMin, parsedAvg, parsedMax := convertTemperatures(temps.(string))
 
-		predicted, exists := measurements[city]
+		predicted, exists := measurements[model.City(city)]
 		if !exists {
 			continue
 		}
@@ -50,13 +50,13 @@ func convertTemperatures(temps string) (float64, float64, float64) {
 func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedMax float64) []error {
 	errs := make([]error, 0)
 	if predicted.Min != parsedMin {
-		errs = append(errs, fmt.Errorf("predicted Min = %2f, actual = %2f, city = %s", predicted.Min, parsedMin, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Min = %2f, actual = %2f, city = %v", predicted.Min, parsedMin, predicted.City))
 	}
 	if predicted.Avg != parsedAvg {
-		errs = append(errs, fmt.Errorf("predicted Avg = %2f, actual = %2f, city = %s", predicted.Avg, parsedAvg, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Avg = %2f, actual = %2f, city = %v", predicted.Avg, parsedAvg, predicted.City))
 	}
 	if predicted.Max != parsedMax {
-		errs = append(errs, fmt.Errorf("predicted Max = %2f, actual = %2f, city = %s", predicted.Max, parsedMax, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Max = %2f, actual = %2f, city = %v", predicted.Max, parsedMax, predicted.City))
 	}
 	return errs
 }
