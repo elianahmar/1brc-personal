@@ -2,12 +2,19 @@ package preprocessor
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/throwea/1brc-go/pkg/model"
 	"github.com/throwea/1brc-go/pkg/utils"
 )
+
+func ReadFile(path string) io.ReadCloser {
+	content, err := os.ReadFile(path)
+	utils.FatalError(err)
+}
 
 func CollectData(data chan string) map[model.City]*model.Measurement {
 	measurements := make(map[model.City]*model.Measurement)
