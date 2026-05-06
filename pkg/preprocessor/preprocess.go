@@ -19,31 +19,45 @@ func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
-	data := make(chan string, chanSize)
+	dataChan := make(chan string, chanSize)
 	wg := sync.WaitGroup{}
-	wg.Add(1)
+	wg.Add(2)
 	// NOTE: this is where we read the line and push the line string to channel
+	// Start one go routine which produces lines and pushes them to data
+	// We start another go routine which is receiving from the data channel and updating a map
+	// once the data chan is closed we will exit from collect data and push the map to the measurement chan
+	// Simple producer consumer pattern
 	go func() {
 		defer wg.Done()
 		lines := chanSize
 		for fileScanner.Scan() {
 			text := fileScanner.Text()
-			data <- text
+			dataChan <- text
 			lines -= 1
 			if lines <= 0 {
 				break
 			}
 		}
-		close(data)
+		close(dataChan)
 	}()
-	measurements := collectData(data)
+
+	measurementChan := make(chan map[model.City]*model.Measurement, 1)
+	go func(dataChan chan string, measurements chan map[model.City]*model.Measurement, linesToProcess int) {
+		defer wg.Done()
+		collectData(dataChan, measurementChan, linesToProcess)
+		close(measurementChan)
+	}(dataChan, measurementChan, chanSize)
+
+	// measurements := collectData(data)
 	wg.Wait()
-	return measurements
+	return <-measurementChan
 }
 
-func collectData(data chan string) map[model.City]*model.Measurement {
+func collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int) {
 	measurements := make(map[model.City]*model.Measurement)
+	linesProcessed := 0
 	for text := range data {
+		linesProcessed += 1
 		city, temp := processLine(text)
 
 		if _, exists := measurements[city]; !exists {
@@ -53,9 +67,10 @@ func collectData(data chan string) map[model.City]*model.Measurement {
 		measurements[city].Count += 1
 		measurements[city].Max = math.Max(measurements[city].Max, temp)
 		measurements[city].Min = math.Min(measurements[city].Min, temp)
-		// fmt.Printf("%v\n", measurements[city])
 	}
-	return measurements
+	utils.PanicOnCondition(linesProcessed != linesToProcess, "didn't process all lines")
+
+	measurementChan <- measurements
 }
 
 func processLine(text string) (model.City, float64) {

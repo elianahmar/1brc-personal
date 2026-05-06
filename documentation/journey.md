@@ -18,3 +18,4 @@
 - When running the application I'm seeing that memory from activity monitor reached as high as 38GB
 - Got a baseline of 473 seconds (7.88 minutes)
 - I noticed I'm off by .1. Specifically I'm predicting .1 under for all of the misses across min, max, and avg
+- I just implemented the producer consumer pattern where two go routines are running concurrently, with one pushing to a channel and the other receiving from the channel and updating a map. This brought the runtime down to 426 seconds. -47 seconds. Good improvement. 413 to go!
