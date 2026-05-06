@@ -13,10 +13,7 @@ import (
 
 func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
 	var validation map[model.City]string
-	content, err := os.ReadFile("./validation.json")
-	if err != nil {
-		panic(err)
-	}
+	content := utils.PanicOnError(os.ReadFile("./validation.json"))
 
 	if err := json.Unmarshal(content, &validation); err != nil {
 		panic(err)
@@ -24,22 +21,17 @@ func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
 	for city, temps := range validation { // NOTE: don't think this is right?
 		parsedMin, parsedAvg, parsedMax := convertTemperatures(temps)
 		predicted, exists := measurements[city]
-		if !exists {
-			panic(fmt.Errorf("no data for city: %s", city))
-		}
+		utils.PanicOnCondition(!exists, fmt.Sprintf("no data for city: %s", city))
 		errs := validateNumbers(predicted, parsedMin, parsedAvg, parsedMax)
-		if len(errs) > 0 {
-			panic(collectErrs(errs))
-		}
-
+		utils.PanicOnCondition(len(errs) > 0, collectErrs(errs))
 	}
 }
 
 func convertTemperatures(temps string) (float64, float64, float64) {
 	values := strings.Split(temps, "/")
-	minActual, _ := strconv.ParseFloat(values[0], 32)
-	avgActual, _ := strconv.ParseFloat(values[1], 32)
-	maxActual, _ := strconv.ParseFloat(values[2], 32)
+	minActual := utils.PanicOnError(strconv.ParseFloat(values[0], 32))
+	avgActual := utils.PanicOnError(strconv.ParseFloat(values[1], 32))
+	maxActual := utils.PanicOnError(strconv.ParseFloat(values[2], 32))
 	parsedMin := utils.TruncateNaive(minActual, 0.1)
 	parsedAvg := utils.TruncateNaive(avgActual, 0.1)
 	parsedMax := utils.TruncateNaive(maxActual, 0.1)
@@ -57,10 +49,10 @@ func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedM
 	if predicted.Max != parsedMax {
 		errs = append(errs, fmt.Errorf("min value for city: %s doesn't match", predicted.City))
 	}
-	return nil
+	return errs
 }
 
-func collectErrs(errs []error) strings.Builder {
+func collectErrs(errs []error) string {
 	result := strings.Builder{}
 	for _, err := range errs {
 		_, err := result.WriteString(err.Error() + "\n")
@@ -68,5 +60,5 @@ func collectErrs(errs []error) strings.Builder {
 			panic("can't write the errors to a string")
 		}
 	}
-	return result
+	return result.String()
 }

@@ -2,7 +2,6 @@ package preprocessor
 
 import (
 	"bufio"
-	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -54,8 +53,7 @@ func collectData(data chan string) map[model.City]*model.Measurement {
 		measurements[city].Count += 1
 		measurements[city].Max = math.Max(measurements[city].Max, temp)
 		measurements[city].Min = math.Min(measurements[city].Min, temp)
-		// NOTE: Max and Min are coming as zero
-		fmt.Printf("%v\n", measurements[city])
+		// fmt.Printf("%v\n", measurements[city])
 	}
 	return measurements
 }
