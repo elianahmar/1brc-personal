@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -18,6 +17,6 @@ func PanicOnError[T any](obj T, err error) T {
 
 func PanicOnCondition(cond bool, msg string) {
 	if cond {
-		panic(fmt.Errorf(msg))
+		panic(msg)
 	}
 }
