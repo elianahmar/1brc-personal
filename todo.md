@@ -2,6 +2,7 @@
 - Read the entire file into memory -> DONE
 - Calculate the min max and average of 1 billion measurements -> DONE
 //=====
+- At the last line, add total number of misses, min misses, avg misses, max misses
 - Fix the under by .1 issue. Thinking it's an issue with truncating
 - Optimize, Optimize, Optimize
 - Aim for under 15 seconds
