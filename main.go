@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 
 func main() {
 	// Start CPU and Memory Profiling
+	// runtime.SetCPUProfileRate(1)
+	runtime.SetBlockProfileRate(1)
 	start := time.Now()
 	runCalculations()
 	fmt.Printf("Time taken: %2f", time.Since(start).Seconds())
@@ -36,9 +39,9 @@ func runCalculations() {
 	defer pprof.StopCPUProfile()
 
 	// Run the script
-	measurements := pre.ReadFile("../1brc-go/measurements.txt", 1000)
+	measurements := pre.ReadFile("../1brc-go/measurements.txt", 1000000000)
 	compute.ComputeAvg(measurements)
 	validator.ValidateCorrectness(measurements)
 
-	utils.PanicOnError(struct{}{}, pprof.Lookup("heap").WriteTo(memProfile, 0))
+	utils.PanicOnError(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }

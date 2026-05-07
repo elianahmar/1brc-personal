@@ -22,3 +22,27 @@
 - I added some helpful metrics to track misses across min, max, and avg. Additionally, I also added metrics for tracking the number of cities processed. We only process 413 cities
   - This means that a majority of the time, actually comes from reading in the file. Which is obvious in retrospect, but helpful nonetheless to know.
   - Now, I can say with certainty that a majority of the performance gains will come from reading the file concurrently
+
+
+## Fourth day 5/6/26
+- Finally got the memory/cpu profiling working. Ran the full profiling and am finally getting some good profiling data back. 
+- From heap profile. Almost all the time is going into the ReadFile() function which confirms my suspicion
+- For the cpu profiling I'm seeing the following
+
+```txt
+Showing top 10 nodes out of 64
+      flat  flat%   sum%        cum   cum%
+    59.85s 18.15% 18.15%     59.85s 18.15%  runtime.memclrNoHeapPointers
+    57.79s 17.53% 35.68%     57.79s 17.53%  runtime.usleep
+    39.31s 11.92% 47.60%     39.31s 11.92%  runtime.madvise
+    35.09s 10.64% 58.25%     36.55s 11.09%  runtime.scanobject
+    31.53s  9.56% 67.81%     31.53s  9.56%  countbytebody
+    30.82s  9.35% 77.16%     30.82s  9.35%  runtime.memmove
+    28.70s  8.70% 85.86%     28.70s  8.70%  syscall.syscall
+    20.81s  6.31% 92.17%     20.81s  6.31%  runtime.pthread_cond_signal
+     6.84s  2.07% 94.25%      7.61s  2.31%  runtime.mallocgcTiny
+     2.73s  0.83% 95.07%      2.73s  0.83%  runtime.(*mspan).init
+(pprof) %
+```
+
+

@@ -1,0 +1,2 @@
+- https://github.com/kgrz/reading-files-in-go/blob/master/reading-chunkwise-multiple.go
+- https://warrenu.github.io/posts/2025/09/goroutines-channels-patterns/
