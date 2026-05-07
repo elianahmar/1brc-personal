@@ -40,5 +40,5 @@ func runCalculations() {
 	compute.ComputeAvg(measurements)
 	validator.ValidateCorrectness(measurements)
 
-	utils.PanicOnError(struct{}{}, pprof.Lookup("heap").WriteTo(memProfile, 0))
+	utils.PanicOnError(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }
