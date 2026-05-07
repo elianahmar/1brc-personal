@@ -1,3 +1,5 @@
+package preprocessor
+
 import "testing"
 
 // TODO: test that the reconcile lines method actually works correctly

@@ -2,6 +2,7 @@ package preprocessor
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -21,14 +22,14 @@ type readChunk struct {
 	offset int
 }
 
-func ReadFileConcurrent(path string, chanSize int) map[model.City]*model.Measurement {
+func ReadFileConcurrent(path string) map[model.City]*model.Measurement {
 	wg := &sync.WaitGroup{}
 	file := utils.PanicOnError(os.Open(path))
 	defer file.Close()
 
 	fileStats := utils.PanicOnError(file.Stat())
 	fileSizeBytes := fileStats.Size()
-	chunkSize := 500 // characters
+	chunkSize := 100000 // characters
 
 	goRoutines := fileSizeBytes / int64(chunkSize)
 
@@ -48,6 +49,7 @@ func ReadFileConcurrent(path string, chanSize int) map[model.City]*model.Measure
 	for i := 0; i < int(goRoutines); i++ {
 		go func(i int) {
 			defer wg.Done()
+			// fmt.Println("reading chunk %d", i)
 			chunk := &chunks[i]
 			buffer := make([]byte, chunk.bufSize)
 			file.ReadAt(buffer, int64(chunk.offset))
@@ -75,7 +77,7 @@ func reconcileLines(readChunks []readChunk) {
 func reconcileChunks(currChunk *readChunk, nextChunk *readChunk) {
 	// If we cut off at the right point. Return early
 	bufLen := len(currChunk.buffer)
-	if currChunk.buffer[bufLen] == '\n' {
+	if currChunk.buffer[bufLen-1] == '\n' {
 		return
 	}
 	// Compute the first '\n' in next chunk and append it to currChunk
@@ -88,7 +90,7 @@ func reconcileChunks(currChunk *readChunk, nextChunk *readChunk) {
 func collectDataConcurrent(readChunks []readChunk) map[model.City]*model.Measurement {
 	// For now, I'll go through everything sequentially. Once I feel good about implementation
 	// I'll make this parallel
-	var measurements map[model.City]*model.Measurement
+	measurements := make(map[model.City]*model.Measurement, 500)
 	for _, chunk := range readChunks {
 		processChunk(chunk, measurements)
 	}
@@ -100,9 +102,12 @@ func processChunk(chunk readChunk, measurements map[model.City]*model.Measuremen
 	newline := []byte{'\n'}
 	lineSeparated := bytes.Split(chunk.buffer, newline)
 	for i := range lineSeparated {
-		line := lineSeparated[i]
+		// line := lineSeparated[i]
+		// if line[len(line)-1] != '\n' {
+		// 	fmt.Println("%v not ending with newline", string(line))
+		// }
 
-		utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
+		// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
 		city, temp := processLineByte(lineSeparated[i])
 		if _, exists := measurements[city]; !exists {
 			measurements[city] = &model.Measurement{City: city}
@@ -117,7 +122,8 @@ func processChunk(chunk readChunk, measurements map[model.City]*model.Measuremen
 func processLineByte(bSlice []byte) (model.City, float64) {
 	semicolon := []byte{';'}
 	split := bytes.Split(bSlice, semicolon)
-	utils.PanicOnCondition(len(split) == 2, "byte slice not containing both city and temp")
+	fmt.Println("%v", split)
+	utils.PanicOnCondition(len(split) != 2, "byte slice not containing both city and temp")
 	dig := utils.PanicOnError(strconv.ParseFloat(string(split[1]), 64))
 	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
 	return model.City(split[0]), temp

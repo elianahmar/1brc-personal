@@ -39,7 +39,8 @@ func runCalculations() {
 	defer pprof.StopCPUProfile()
 
 	// Run the script
-	measurements := pre.ReadFile("../1brc-go/measurements.txt", 1000000000)
+	// measurements := pre.ReadFile("../1brc-go/measurements.txt", 1000)
+	measurements := pre.ReadFileConcurrent("../1brc-go/measurements.txt")
 	compute.ComputeAvg(measurements)
 	validator.ValidateCorrectness(measurements)
 
