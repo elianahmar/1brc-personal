@@ -23,7 +23,7 @@ func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	fileScanner.Split(bufio.ScanLines)
 
 	dataChan := make(chan string, chanSize)
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	// NOTE: this is where we read the line and push the line string to channel
 	// Start one go routine which produces lines and pushes them to data
@@ -47,17 +47,15 @@ func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	measurementChan := make(chan map[model.City]*model.Measurement, 1)
 	// I think for code clarify I make make this method return a func so I can just do go collectData()
 	// That will clarify the code
-	go func(dataChan chan string, measurements chan map[model.City]*model.Measurement, linesToProcess int) {
-		defer wg.Done()
-		collectData(dataChan, measurementChan, linesToProcess)
-	}(dataChan, measurementChan, chanSize)
+	go collectData(dataChan, measurementChan, chanSize, wg)
 
 	// measurements := collectData(data)
 	wg.Wait()
 	return <-measurementChan
 }
 
-func collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int) {
+func collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int, wg *sync.WaitGroup) {
+	defer wg.Done()
 	measurements := make(map[model.City]*model.Measurement, 500)
 	linesProcessed := 0
 	for text := range data {
