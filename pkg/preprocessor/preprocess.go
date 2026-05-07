@@ -30,23 +30,9 @@ func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	// We start another go routine which is receiving from the data channel and updating a map
 	// once the data chan is closed we will exit from collect data and push the map to the measurement chan
 	// Simple producer consumer pattern
-	go func() {
-		defer wg.Done()
-		lines := chanSize
-		for fileScanner.Scan() {
-			text := fileScanner.Text()
-			dataChan <- text
-			lines -= 1
-			if lines <= 0 {
-				break
-			}
-		}
-		close(dataChan)
-	}()
-
+	go pushLines(fileScanner, dataChan, chanSize, wg)
 	measurementChan := make(chan map[model.City]*model.Measurement, 1)
-	// I think for code clarify I make make this method return a func so I can just do go collectData()
-	// That will clarify the code
+
 	go collectData(dataChan, measurementChan, chanSize, wg)
 
 	// measurements := collectData(data)
@@ -74,6 +60,20 @@ func collectData(data chan string, measurementChan chan map[model.City]*model.Me
 
 	measurementChan <- measurements
 	close(measurementChan)
+}
+
+func pushLines(fileScanner *bufio.Scanner, dataChan chan string, chanSize int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	lines := chanSize
+	for fileScanner.Scan() {
+		text := fileScanner.Text()
+		dataChan <- text
+		lines -= 1
+		if lines <= 0 {
+			break
+		}
+	}
+	close(dataChan)
 }
 
 func processLine(text string) (model.City, float64) {
