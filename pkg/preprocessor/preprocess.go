@@ -12,6 +12,9 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
+// TODO: this is where a majority of the optimizations will need to be made
+// For context: we only process 413 cities in total. A majority of the time is gonna be from just
+// reading the file
 func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	file := utils.PanicOnError(os.Open(path))
 	defer file.Close()
@@ -54,7 +57,7 @@ func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 }
 
 func collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int) {
-	measurements := make(map[model.City]*model.Measurement)
+	measurements := make(map[model.City]*model.Measurement, 500)
 	linesProcessed := 0
 	for text := range data {
 		linesProcessed += 1
