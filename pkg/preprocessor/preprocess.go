@@ -45,10 +45,11 @@ func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	}()
 
 	measurementChan := make(chan map[model.City]*model.Measurement, 1)
+	// I think for code clarify I make make this method return a func so I can just do go collectData()
+	// That will clarify the code
 	go func(dataChan chan string, measurements chan map[model.City]*model.Measurement, linesToProcess int) {
 		defer wg.Done()
 		collectData(dataChan, measurementChan, linesToProcess)
-		close(measurementChan)
 	}(dataChan, measurementChan, chanSize)
 
 	// measurements := collectData(data)
@@ -74,6 +75,7 @@ func collectData(data chan string, measurementChan chan map[model.City]*model.Me
 	utils.PanicOnCondition(linesProcessed != linesToProcess, "didn't process all lines")
 
 	measurementChan <- measurements
+	close(measurementChan)
 }
 
 func processLine(text string) (model.City, float64) {
