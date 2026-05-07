@@ -1,7 +1,10 @@
 package preprocessor
 
 import (
+	"bytes"
+	"math"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/throwea/1brc-go/pkg/model"
@@ -53,15 +56,15 @@ func ReadFileConcurrent(path string, chanSize int) map[model.City]*model.Measure
 	}
 	wg.Wait()
 
-	readChunks = reconcileLines(readChunks)
-	measurements := collectDataConcurrent()
+	reconcileLines(readChunks)
+	measurements := collectDataConcurrent(readChunks)
 
 	return measurements
 }
 
 // This method is needed to ensure that chunk reading doesn't cut off a line
 // If we discover a line to be cut off. Then we will push it up to the previous chunk
-func reconcileLines(readChunks []readChunk) []readChunk {
+func reconcileLines(readChunks []readChunk) {
 	// 1. Go through each read chunk sequentially
 	// 2. If current chunk doesn't end with newline character, then I need to grab everything from the next chunk up to /n and append it to the current chunk
 	for i := 0; i < len(readChunks)-1; i++ {
@@ -82,4 +85,36 @@ func reconcileChunks(currChunk *readChunk, nextChunk *readChunk) {
 	nextChunk.buffer = nextChunk.buffer[breakPoint+1:]
 }
 
-func collectDataConcurrent() map[model.City]*model.Measurement {}
+func collectDataConcurrent(readChunks []readChunk) map[model.City]*model.Measurement {
+	// For now, I'll go through everything sequentially. Once I feel good about implementation
+	// I'll make this parallel
+	var measurements map[model.City]*model.Measurement
+	for _, chunk := range readChunks {
+		processChunk(chunk, measurements)
+	}
+	return measurements
+}
+
+func processChunk(chunk readChunk, measurements map[model.City]*model.Measurement) {
+	// Process each byte
+	newline := []byte{'\n'}
+	lineSeparated := bytes.Split(chunk.buffer, newline)
+	for i := range lineSeparated {
+		city, temp := processLineByte(lineSeparated[i])
+		if _, exists := measurements[city]; !exists {
+			measurements[city] = &model.Measurement{City: city}
+		}
+		measurements[city].Temps += temp
+		measurements[city].Count += 1
+		measurements[city].Max = math.Max(measurements[city].Max, temp)
+		measurements[city].Min = math.Min(measurements[city].Min, temp)
+	}
+}
+
+func processLineByte(bSlice []byte) (model.City, float64) {
+	semicolon := []byte{';'}
+	split := bytes.Split(bSlice, semicolon)
+	dig := utils.PanicOnError(strconv.ParseFloat(string(split[1]), 64))
+	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
+	return model.City(split[0]), temp
+}
