@@ -21,7 +21,7 @@ func PanicOnCondition(cond bool, msg string) {
 	}
 }
 
-// Simple util to find first occurrence of something based
+// First is a simple util to find first occurrence of something based
 // on condition and return the index. Using this primarily for reconciling the chunks
 func First[T any](items []T, fn func(T) bool) int {
 	for i := range items {
