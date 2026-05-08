@@ -12,51 +12,41 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
+// THOUGHTS: To read concurrently, I will need to read each byte individually. However, that will pose another problem
+// If I chunk based on bytes, then there is a possibility of some lines being cut off. I would have to resolve those lines
+// Let me think about this. I read the entire line by line and create an object for each line. What if read in parallel, rejoin the entire
+// TODO: Come back to this. Let's first use a pool of strings.
+
 // TODO: this is where a majority of the optimizations will need to be made
 // For context: we only process 413 cities in total. A majority of the time is gonna be from just
 // reading the file
 func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
+	dataChan := make(chan string, chanSize)
+	wg := &sync.WaitGroup{}
 	file := utils.PanicOnError(os.Open(path))
 	defer file.Close()
 
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
-	dataChan := make(chan string, chanSize)
-	wg := sync.WaitGroup{}
-	wg.Add(2)
 	// NOTE: this is where we read the line and push the line string to channel
 	// Start one go routine which produces lines and pushes them to data
 	// We start another go routine which is receiving from the data channel and updating a map
 	// once the data chan is closed we will exit from collect data and push the map to the measurement chan
 	// Simple producer consumer pattern
-	go func() {
-		defer wg.Done()
-		lines := chanSize
-		for fileScanner.Scan() {
-			text := fileScanner.Text()
-			dataChan <- text
-			lines -= 1
-			if lines <= 0 {
-				break
-			}
-		}
-		close(dataChan)
-	}()
-
 	measurementChan := make(chan map[model.City]*model.Measurement, 1)
-	go func(dataChan chan string, measurements chan map[model.City]*model.Measurement, linesToProcess int) {
-		defer wg.Done()
-		collectData(dataChan, measurementChan, linesToProcess)
-		close(measurementChan)
-	}(dataChan, measurementChan, chanSize)
 
-	// measurements := collectData(data)
+	wg.Add(2)
+	// Producer consumer pattern. Consumers will stop receiving once the channel is closed
+	go pushLines(fileScanner, dataChan, chanSize, wg)
+	go collectData(dataChan, measurementChan, chanSize, wg)
 	wg.Wait()
+
 	return <-measurementChan
 }
 
-func collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int) {
+func collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int, wg *sync.WaitGroup) {
+	defer wg.Done()
 	measurements := make(map[model.City]*model.Measurement, 500)
 	linesProcessed := 0
 	for text := range data {
@@ -74,6 +64,25 @@ func collectData(data chan string, measurementChan chan map[model.City]*model.Me
 	utils.PanicOnCondition(linesProcessed != linesToProcess, "didn't process all lines")
 
 	measurementChan <- measurements
+	close(measurementChan)
+}
+
+func pushLines(fileScanner *bufio.Scanner, dataChan chan string, chanSize int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	naiveLineScanner(fileScanner, dataChan, chanSize)
+	close(dataChan)
+}
+
+func naiveLineScanner(fileScanner *bufio.Scanner, dataChan chan string, chanSize int) {
+	lines := chanSize
+	for fileScanner.Scan() {
+		text := fileScanner.Text()
+		dataChan <- text
+		lines -= 1
+		if lines <= 0 {
+			break
+		}
+	}
 }
 
 func processLine(text string) (model.City, float64) {
