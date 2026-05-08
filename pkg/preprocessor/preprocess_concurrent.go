@@ -15,11 +15,13 @@ import (
 type chunk struct {
 	bufSize int
 	offset  int
+	idx     int
 }
 
 type readChunk struct {
 	buffer []byte
 	offset int
+	idx    int
 }
 
 func ReadFileConcurrent(path string) map[model.City]*model.Measurement {
@@ -41,6 +43,7 @@ func ReadFileConcurrent(path string) map[model.City]*model.Measurement {
 	for i := 0; i < int(goRoutines); i++ {
 		chunks[i].bufSize = chunkSize
 		chunks[i].offset = i * chunkSize
+		chunks[i].idx = i
 	}
 	readChunks := make([]readChunk, goRoutines)
 
@@ -53,7 +56,7 @@ func ReadFileConcurrent(path string) map[model.City]*model.Measurement {
 			chunk := &chunks[i]
 			buffer := make([]byte, chunk.bufSize)
 			file.ReadAt(buffer, int64(chunk.offset))
-			readChunks[i] = readChunk{buffer: buffer, offset: chunk.offset}
+			readChunks[i] = readChunk{idx: i, buffer: buffer, offset: chunk.offset}
 		}(i)
 	}
 	wg.Wait()
@@ -91,24 +94,27 @@ func collectDataConcurrent(readChunks []readChunk) map[model.City]*model.Measure
 	// For now, I'll go through everything sequentially. Once I feel good about implementation
 	// I'll make this parallel
 	measurements := make(map[model.City]*model.Measurement, 500)
+	totalLines := 0
 	for _, chunk := range readChunks {
-		processChunk(chunk, measurements)
+		totalLines += processChunk(chunk, measurements, len(readChunks))
 	}
+	utils.PanicOnCondition(totalLines != 1000000000, "not all cities processed")
 	return measurements
 }
 
-func processChunk(chunk readChunk, measurements map[model.City]*model.Measurement) {
+func processChunk(chunk readChunk, measurements map[model.City]*model.Measurement, numChunks int) int {
 	// Process each byte
 	newline := []byte{'\n'}
+	processed := 0
 	lineSeparated := bytes.Split(chunk.buffer, newline)
 	for i := range lineSeparated {
 		// line := lineSeparated[i]
-		// if line[len(line)-1] != '\n' {
-		// 	fmt.Println("%v not ending with newline", string(line))
-		// }
-
+		// utils.PanicOnCondition(len(line) <= 0, fmt.Sprintf("line %d/%d is empty... shouldn't happen. Chunk index: %d, total chunks: %d", i, len(lineSeparated), chunk.idx, numChunks))
 		// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
-		city, temp := processLineByte(lineSeparated[i])
+		city, temp, err := processLineByte(lineSeparated[i])
+		if err != nil {
+			continue
+		}
 		if _, exists := measurements[city]; !exists {
 			measurements[city] = &model.Measurement{City: city}
 		}
@@ -116,15 +122,20 @@ func processChunk(chunk readChunk, measurements map[model.City]*model.Measuremen
 		measurements[city].Count += 1
 		measurements[city].Max = math.Max(measurements[city].Max, temp)
 		measurements[city].Min = math.Min(measurements[city].Min, temp)
+		processed += 1
 	}
+	return processed
 }
 
-func processLineByte(bSlice []byte) (model.City, float64) {
+func processLineByte(bSlice []byte) (model.City, float64, error) {
 	semicolon := []byte{';'}
 	split := bytes.Split(bSlice, semicolon)
-	fmt.Println("%v", split)
-	utils.PanicOnCondition(len(split) != 2, "byte slice not containing both city and temp")
+	if len(split) != 2 {
+		return "", 0.0, fmt.Errorf("split not long enough")
+	}
+	// fmt.Println("%v", split)
+	// utils.PanicOnCondition(len(split) != 2, "byte slice not containing both city and temp")
 	dig := utils.PanicOnError(strconv.ParseFloat(string(split[1]), 64))
 	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
-	return model.City(split[0]), temp
+	return model.City(split[0]), temp, nil
 }
