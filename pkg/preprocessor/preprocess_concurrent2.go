@@ -3,6 +3,7 @@ package preprocessor
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -60,11 +61,11 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 
 type Line struct {
 	// What chunk it appears in
-	chunkIdx int
+	ChunkIdx int
 	// Full line as byte slice
-	line []byte
+	Line []byte
 	// Index of the line after we split the bytes on '\n'
-	lineIdx int
+	LineIdx int
 }
 
 // What is the idea here? I have multiple chunks of bytes that I have to reconcile somehow. At the boundaries they will be cutoff
@@ -77,6 +78,7 @@ func cutLinesConcurrent(readChunks []*readChunk) {
 	newline := []byte{'\n'}
 	wg := &sync.WaitGroup{}
 	ops := atomic.Uint64{}
+	mu := sync.Mutex{}
 
 	wg.Add(3)
 	// Producer
@@ -87,20 +89,37 @@ func cutLinesConcurrent(readChunks []*readChunk) {
 			splitLines := bytes.Split(chunk.buffer, newline)
 			linesToProcess := len(splitLines)
 			// Push the very first and very last line
-			mergeChan <- Line{chunkIdx: chunk.idx, line: splitLines[0], lineIdx: 0}
-			mergeChan <- Line{chunkIdx: chunk.idx, line: splitLines[linesToProcess-1], lineIdx: linesToProcess}
+			mergeChan <- Line{ChunkIdx: chunk.idx, Line: splitLines[0], LineIdx: 0}
+			mergeChan <- Line{ChunkIdx: chunk.idx, Line: splitLines[linesToProcess-1], LineIdx: linesToProcess}
 
 			for i := 1; i < linesToProcess-1; i++ {
-				fullLineChan <- Line{chunkIdx: chunk.idx, line: splitLines[i], lineIdx: i}
+				fullLineChan <- Line{ChunkIdx: chunk.idx, Line: splitLines[i], LineIdx: i}
 			}
 		}
 	}()
 
-	// Consumer 1 for good lines
+	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
+	measurements := make(map[model.City]*model.Measurement)
 	go func() {
 		defer wg.Done()
 		for goodLine := range fullLineChan {
 			ops.Add(1)
+			// line := lineSeparated[i]
+			// utils.PanicOnCondition(len(line) <= 0, fmt.Sprintf("line %d/%d is empty... shouldn't happen. Chunk index: %d, total chunks: %d", i, len(lineSeparated), chunk.idx, numChunks))
+			// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
+			city, temp, err := processLineByte(goodLine.Line)
+			if err != nil {
+				continue
+			}
+			mu.Lock()
+			if _, exists := measurements[city]; !exists {
+				measurements[city] = &model.Measurement{City: city}
+			}
+			measurements[city].Temps += temp
+			measurements[city].Count += 1
+			measurements[city].Max = math.Max(measurements[city].Max, temp)
+			measurements[city].Min = math.Min(measurements[city].Min, temp)
+			mu.Unlock()
 		}
 	}()
 
