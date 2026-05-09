@@ -1,32 +1,21 @@
 package preprocessor
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"math"
-	"strconv"
+	"os"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/throwea/1brc-go/pkg/model"
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-type chunk struct {
-	bufSize int
-	offset  int
-	idx     int
-}
-
-type readChunk struct {
-	buffer []byte
-	offset int
-	idx    int
-}
-
 func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 	wg := &sync.WaitGroup{}
-	fileScanner := bufio.Scanner{}
+	readFileStart := time.Now()
+	file := utils.PanicOnError(os.Open(path))
 	defer file.Close()
 
 	fileStats := utils.PanicOnError(file.Stat())
@@ -45,7 +34,7 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 		chunks[i].offset = i * chunkSize
 		chunks[i].idx = i
 	}
-	readChunks := make([]readChunk, goRoutines)
+	readChunks := make([]*readChunk, goRoutines)
 
 	wg.Add(int(goRoutines))
 	// spawn go routines for reading each chunk
@@ -56,90 +45,70 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 			chunk := &chunks[i]
 			buffer := make([]byte, chunk.bufSize)
 			file.ReadAt(buffer, int64(chunk.offset))
-			readChunks[i] = readChunk{idx: i, buffer: buffer, offset: chunk.offset}
+			readChunks[i] = &readChunk{idx: i, buffer: buffer, offset: chunk.offset}
 		}(i)
 	}
 	wg.Wait()
+	fmt.Println("time taken to process all the bytes %d", time.Since(readFileStart).Seconds())
 
-	reconcileLines(readChunks)
-	measurements := collectDataConcurrent(readChunks)
+	cutLinesConcurrent(readChunks)
+	// reconcileLines2(readChunks) // TODO: This is killing me
+	// measurements := collectDataConcurrent(readChunks)
 
 	return measurements
 }
 
-// This method is needed to ensure that chunk reading doesn't cut off a line
-// If we discover a line to be cut off. Then we will push it up to the previous chunk
-func reconcileLines(readChunks []readChunk) {
-	// 1. Go through each read chunk sequentially
-	// 2. If current chunk doesn't end with newline character, then I need to grab everything from the next chunk up to /n and append it to the current chunk
-	for i := 0; i < len(readChunks)-1; i++ {
-		reconcileChunks(&readChunks[i], &readChunks[i+1])
-	}
+type Line struct {
+	// What chunk it appears in
+	chunkIdx int
+	// Full line as byte slice
+	line []byte
+	// Index of the line after we split the bytes on '\n'
+	lineIdx int
 }
 
-// TODO: this is completely cooking my runtime
-func reconcileChunks(currChunk *readChunk, nextChunk *readChunk) {
-	// If we cut off at the right point. Return early
-	bufLen := len(currChunk.buffer)
-	if currChunk.buffer[bufLen-1] == '\n' {
-		return
-	}
-	// Compute the first '\n' in next chunk and append it to currChunk
-	// and remove from nextChunk
-	breakPoint := utils.First(nextChunk.buffer, func(b byte) bool { return b == '\n' })
-	if breakPoint == -1 {
-		return
-	}
-	currChunk.buffer = append(currChunk.buffer, nextChunk.buffer[:breakPoint+1]...)
-	nextChunk.buffer = nextChunk.buffer[breakPoint+1:]
-}
-
-func collectDataConcurrent(readChunks []readChunk) map[model.City]*model.Measurement {
-	// For now, I'll go through everything sequentially. Once I feel good about implementation
-	// I'll make this parallel
-	measurements := make(map[model.City]*model.Measurement, 500)
-	totalLines := 0
-	for _, chunk := range readChunks {
-		totalLines += processChunk(chunk, measurements, len(readChunks))
-	}
-	utils.PanicOnCondition(totalLines != 1000000000, "not all cities processed")
-	return measurements
-}
-
-func processChunk(chunk readChunk, measurements map[model.City]*model.Measurement, numChunks int) int {
-	// Process each byte
+// What is the idea here? I have multiple chunks of bytes that I have to reconcile somehow. At the boundaries they will be cutoff
+// So I have two cases I have to deal with
+// So let's do this. First and last line go to merge chan. One edge case we need to deal with is if chunk == 0 and lineidx == 0 then we skip it or if it's the last chunk and last line. Since we can guarantee it's a valid line
+// For the rest, I'm still not clear how I will connect them all concurrently.
+func cutLinesConcurrent(readChunks []*readChunk) {
+	mergeChan := make(chan Line, len(readChunks)-1)
+	fullLineChan := make(chan Line, len(readChunks)-1)
 	newline := []byte{'\n'}
-	processed := 0
-	lineSeparated := bytes.Split(chunk.buffer, newline)
-	for i := range lineSeparated {
-		// line := lineSeparated[i]
-		// utils.PanicOnCondition(len(line) <= 0, fmt.Sprintf("line %d/%d is empty... shouldn't happen. Chunk index: %d, total chunks: %d", i, len(lineSeparated), chunk.idx, numChunks))
-		// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
-		city, temp, err := processLineByte(lineSeparated[i])
-		if err != nil {
-			continue
-		}
-		if _, exists := measurements[city]; !exists {
-			measurements[city] = &model.Measurement{City: city}
-		}
-		measurements[city].Temps += temp
-		measurements[city].Count += 1
-		measurements[city].Max = math.Max(measurements[city].Max, temp)
-		measurements[city].Min = math.Min(measurements[city].Min, temp)
-		processed += 1
-	}
-	return processed
-}
+	wg := &sync.WaitGroup{}
+	ops := atomic.Uint64{}
 
-func processLineByte(bSlice []byte) (model.City, float64, error) {
-	semicolon := []byte{';'}
-	split := bytes.Split(bSlice, semicolon)
-	if len(split) != 2 {
-		return "", 0.0, fmt.Errorf("split not long enough")
-	}
-	// fmt.Println("%v", split)
-	// utils.PanicOnCondition(len(split) != 2, "byte slice not containing both city and temp")
-	dig := utils.PanicOnError(strconv.ParseFloat(string(split[1]), 64))
-	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
-	return model.City(split[0]), temp, nil
+	wg.Add(3)
+	// Producer
+	go func() {
+		defer wg.Done()
+		for _, chunk := range readChunks { // TODO: I could even split this up using go routines
+			// TODO: come back to the merge line case in a bit
+			splitLines := bytes.Split(chunk.buffer, newline)
+			linesToProcess := len(splitLines)
+			// Push the very first and very last line
+			mergeChan <- Line{chunkIdx: chunk.idx, line: splitLines[0], lineIdx: 0}
+			mergeChan <- Line{chunkIdx: chunk.idx, line: splitLines[linesToProcess-1], lineIdx: linesToProcess}
+
+			for i := 1; i < linesToProcess-1; i++ {
+				fullLineChan <- Line{chunkIdx: chunk.idx, line: splitLines[i], lineIdx: i}
+			}
+		}
+	}()
+
+	// Consumer 1 for good lines
+	go func() {
+		defer wg.Done()
+		for goodLine := range fullLineChan {
+			ops.Add(1)
+		}
+	}()
+
+	// Consumer 2 for bad lines
+	go func() {
+		defer wg.Done()
+	}()
+	wg.Wait()
+	linesRead := ops.Load()
+	utils.PanicOnCondition(linesRead != 1000000000, fmt.Sprintf("did not process all lines. Lines read = %d", linesRead))
 }
