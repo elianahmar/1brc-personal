@@ -65,12 +65,14 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 // So let's do this. First and last line go to merge chan. One edge case we need to deal with is if chunk == 0 and lineidx == 0 then we skip it or if it's the last chunk and last line. Since we can guarantee it's a valid line
 // For the rest, I'm still not clear how I will connect them all concurrently.
 func cutLinesConcurrent(readChunks []*m.ReadChunk) {
-	mergeChan := make(chan m.Line, len(readChunks)-1)
-	fullLineChan := make(chan m.Line, len(readChunks)-1)
-	newline := []byte{'\n'}
-	wg := &sync.WaitGroup{}
-	ops := atomic.Uint64{}
-	mu := sync.Mutex{}
+	var (
+		mergeChan    = make(chan m.Line, len(readChunks)-1)
+		fullLineChan = make(chan m.Line, len(readChunks)-1)
+		newline      = []byte{'\n'}
+		wg           = &sync.WaitGroup{}
+		ops          = atomic.Uint64{}
+		mu           = sync.Mutex{}
+	)
 
 	wg.Add(3)
 	// Producer
