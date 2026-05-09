@@ -115,7 +115,7 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 	//	- (c_i, l_a) -> (c_i+1, l_0) "Chunk at index i with line idx a > 0 with next chunk line idx = 0"
 	// 3. After pairing it, I need to push it to good line
 	totalChunks := len(readChunks)
-	go func(totalChunks int) {
+	go func(totalChunks int, fullLineChan chan m.Line) {
 		defer wg.Done()
 		lineMap := make(map[[2]int]m.Line)
 		for mergeLine := range mergeChan {
@@ -129,11 +129,14 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 			ending := [2]int{cIdx + 1, 0}
 			otherLine, exists := lineMap[ending]
 			if !exists {
+				lineMap[beginnning] = mergeLine
 				mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
 				continue
 			}
+			mergeLine.Line = append(mergeLine.Line, otherLine.Line...)
+			fullLineChan <- mergeLine
 		}
-	}(totalChunks)
+	}(totalChunks, fullLineChan)
 	wg.Wait()
 	linesRead := ops.Load()
 	utils.PanicOnCondition(linesRead != 1000000000, fmt.Sprintf("did not process all lines. Lines read = %d", linesRead))
