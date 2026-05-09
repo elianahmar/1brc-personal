@@ -2,7 +2,6 @@ package preprocessor
 
 import (
 	"bytes"
-	"math"
 	"os"
 	"sync"
 
@@ -102,13 +101,8 @@ func processChunk(chunk m.ReadChunk, measurements map[model.City]*model.Measurem
 		if err != nil {
 			continue
 		}
-		if _, exists := measurements[city]; !exists {
-			measurements[city] = &model.Measurement{City: city}
-		}
-		measurements[city].Temps += temp
-		measurements[city].Count += 1
-		measurements[city].Max = math.Max(measurements[city].Max, temp)
-		measurements[city].Min = math.Min(measurements[city].Min, temp)
+		updateMeasurements(measurements, city, temp)
+
 		processed += 1
 	}
 	return processed

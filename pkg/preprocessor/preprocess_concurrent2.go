@@ -3,7 +3,6 @@ package preprocessor
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -51,11 +50,12 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 		}(i)
 	}
 	wg.Wait()
-	fmt.Println("time taken to process all the bytes %d", time.Since(readFileStart).Seconds())
+	fmt.Println("time taken to process all the bytes %2f", time.Since(readFileStart).Seconds())
 
 	cutLinesConcurrent(readChunks)
 	// reconcileLines2(m.ReadChunks) // TODO: This is killing me
 	// measurements := collectDataConcurrent(m.ReadChunks)
+	measurements := make(map[model.City]*model.Measurement)
 
 	return measurements
 }
@@ -106,13 +106,7 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) {
 				continue
 			}
 			mu.Lock()
-			if _, exists := measurements[city]; !exists {
-				measurements[city] = &model.Measurement{City: city}
-			}
-			measurements[city].Temps += temp
-			measurements[city].Count += 1
-			measurements[city].Max = math.Max(measurements[city].Max, temp)
-			measurements[city].Min = math.Min(measurements[city].Min, temp)
+			updateMeasurements(measurements, city, temp)
 			mu.Unlock()
 		}
 	}()
