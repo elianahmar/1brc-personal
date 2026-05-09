@@ -52,19 +52,14 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 	wg.Wait()
 	fmt.Println("time taken to process all the bytes %2f", time.Since(readFileStart).Seconds())
 
-	cutLinesConcurrent(readChunks)
-	// reconcileLines2(m.ReadChunks) // TODO: This is killing me
-	// measurements := collectDataConcurrent(m.ReadChunks)
-	measurements := make(map[model.City]*model.Measurement)
-
-	return measurements
+	return cutLinesConcurrent(readChunks)
 }
 
 // What is the idea here? I have multiple chunks of bytes that I have to reconcile somehow. At the boundaries they will be cutoff
 // So I have two cases I have to deal with
 // So let's do this. First and last line go to merge chan. One edge case we need to deal with is if chunk == 0 and lineidx == 0 then we skip it or if it's the last chunk and last line. Since we can guarantee it's a valid line
 // For the rest, I'm still not clear how I will connect them all concurrently.
-func cutLinesConcurrent(readChunks []*m.ReadChunk) {
+func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measurement {
 	var (
 		mergeChan    = make(chan m.Line, len(readChunks)-1)
 		fullLineChan = make(chan m.Line, len(readChunks)-1)
@@ -86,6 +81,7 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) {
 			mergeChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[0], LineIdx: 0}
 			mergeChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[linesToProcess-1], LineIdx: linesToProcess}
 
+			// NOTE: it's guaranteed that anything between first and last line will be a good line
 			for i := 1; i < linesToProcess-1; i++ {
 				fullLineChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[i], LineIdx: i}
 			}
@@ -94,7 +90,7 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) {
 
 	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
 	measurements := make(map[model.City]*model.Measurement)
-	go func() {
+	go func(measurements map[model.City]*model.Measurement) {
 		defer wg.Done()
 		for goodLine := range fullLineChan {
 			ops.Add(1)
@@ -106,16 +102,40 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) {
 				continue
 			}
 			mu.Lock()
-			updateMeasurements(measurements, city, temp)
+			updateMeasurement(measurements, city, temp)
 			mu.Unlock()
 		}
-	}()
+	}(measurements)
 
-	// Consumer 2 for bad lines
-	go func() {
+	// TODO: Consumer 2 for bad lines
+	// 1. Consume the bad lines
+	// 2. Pair up the bad lines
+	// To do that, I have the line info (chunkIDX, lineIDX)
+	// Case:
+	//	- (c_i, l_a) -> (c_i+1, l_0) "Chunk at index i with line idx a > 0 with next chunk line idx = 0"
+	// 3. After pairing it, I need to push it to good line
+	totalChunks := len(readChunks)
+	go func(totalChunks int) {
 		defer wg.Done()
-	}()
+		lineMap := make(map[[2]int]m.Line)
+		for mergeLine := range mergeChan {
+			// Loc[0] = chunk idx, Loc[1] = line index
+			cIdx, lIdx := mergeLine.ChunkIdx, mergeLine.LineIdx
+			if (cIdx == 0 && lIdx == 0) || (cIdx == totalChunks-1 && lIdx > 0) {
+				fullLineChan <- m.Line{ChunkIdx: cIdx, Line: mergeLine.Line, LineIdx: lIdx}
+				continue
+			}
+			beginnning := [2]int{cIdx, lIdx}
+			ending := [2]int{cIdx + 1, 0}
+			otherLine, exists := lineMap[ending]
+			if !exists {
+				mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
+				continue
+			}
+		}
+	}(totalChunks)
 	wg.Wait()
 	linesRead := ops.Load()
 	utils.PanicOnCondition(linesRead != 1000000000, fmt.Sprintf("did not process all lines. Lines read = %d", linesRead))
+	return measurements
 }
