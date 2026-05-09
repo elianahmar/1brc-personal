@@ -17,3 +17,15 @@ type Measurement struct {
 	Max   float64
 	Avg   float64
 }
+
+type ReadChunk struct {
+	Buffer []byte
+	Offset int
+	Idx    int
+}
+
+type Chunk struct {
+	BufSize int
+	Offset  int
+	Idx     int
+}
