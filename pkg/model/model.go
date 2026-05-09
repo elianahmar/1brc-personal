@@ -29,3 +29,12 @@ type Chunk struct {
 	Offset  int
 	Idx     int
 }
+
+type Line struct {
+	// What chunk it appears in
+	ChunkIdx int
+	// Full line as byte slice
+	Line []byte
+	// Index of the line after we split the bytes on '\n'
+	LineIdx int
+}

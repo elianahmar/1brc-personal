@@ -46,3 +46,11 @@ Showing top 10 nodes out of 64
 ```
 
 
+### Fifth Day 5/8/26
+- Finally got a concurrent implementation for file reading working
+- However, the runtime is significantly worse. I'm getting 631 seconds
+- From the heap dump, I'm seeing that reconcileChunks() eating my memory. This was the function I created because, reading by chunk, leads to cases where I a line could be cut off
+
+### 6th Day 5/9/26
+- Okay, did some more profiling and saw that reading the file concurrently took 11 seconds. That's blazing fast. SO I think the main concern now, is that I need to intelligently correct lines at the boundary point.
+- My overall performance for the concurrent implementation became worse. But I think I will need to optimize how I bring the chunks together. I have some ideas but will have to see. Maybe at the offset, I could splitN instead
