@@ -91,43 +91,10 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 
 	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
 	measurements := make(map[model.City]*model.Measurement)
-	go consumeFullLines(measurements, fullLineChan, wg, ops, mu)
-
 	totalChunks := len(readChunks)
-	go func(totalChunks int, fullLineChan chan m.Line, mergeChan chan m.Line, wg *sync.WaitGroup) {
-		defer wg.Done()
-		lineMap := make(map[[2]int]m.Line)
-		for mergeLine := range mergeChan {
-			// Loc[0] = chunk idx, Loc[1] = line index
-			cIdx, lIdx := mergeLine.ChunkIdx, mergeLine.LineIdx
-			if (cIdx == 0 && lIdx == 0) || (cIdx == totalChunks-1 && lIdx > 0) {
-				fullLineChan <- mergeLine
-				continue
-			}
-			// If the line we just received is beginning of a chunk. Put it in map and continue
-			beginning := [2]int{cIdx, lIdx}
-			if lIdx == 0 {
-				lineMap[beginning] = mergeLine
-				continue
-			}
-			ending := [2]int{cIdx + 1, 0}
-			otherLine, exists := lineMap[ending]
-			if !exists {
-				lineMap[beginning] = mergeLine
-				mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
-				continue
-			}
-			mergedBuffer := slices.Concat(mergeLine.Line, otherLine.Line)
 
-			// fmt.Println(fmt.Sprintf("\nmerged Buffer: %s\n", string(mergedBuffer)))
-			newLine := m.Line{ChunkIdx: cIdx, Line: mergedBuffer, LineIdx: lIdx}
-			delete(lineMap, beginning)
-			// delete(lineMap, beginning)
-			fullLineChan <- newLine
-		}
-		close(mergeChan)
-		close(fullLineChan)
-	}(totalChunks, fullLineChan, mergeChan, wg)
+	go consumeFullLines(measurements, fullLineChan, wg, ops, mu)
+	go processMergeChan(totalChunks, fullLineChan, mergeChan, wg)
 	wg.Wait()
 	linesRead := ops.Load()
 	utils.PanicOnCondition(linesRead != 1000000000, fmt.Sprintf("did not process all lines. Lines read = %d", linesRead))
@@ -149,4 +116,40 @@ func consumeFullLines(measurements map[model.City]*model.Measurement, fullLineCh
 		UpdateMeasurement(measurements, city, temp)
 		mu.Unlock()
 	}
+}
+
+func processMergeChan(totalChunks int, fullLineChan chan m.Line, mergeChan chan m.Line, wg *sync.WaitGroup) {
+	defer wg.Done()
+	lineMap := make(map[[2]int]m.Line)
+	for mergeLine := range mergeChan {
+		// Loc[0] = chunk idx, Loc[1] = line index
+		cIdx, lIdx := mergeLine.ChunkIdx, mergeLine.LineIdx
+		if (cIdx == 0 && lIdx == 0) || (cIdx == totalChunks-1 && lIdx > 0) {
+			fullLineChan <- mergeLine
+			continue
+		}
+		// If the line we just received is beginning of a chunk. Put it in map and continue
+		beginning := [2]int{cIdx, lIdx}
+		if lIdx == 0 {
+			lineMap[beginning] = mergeLine
+			continue
+		}
+		ending := [2]int{cIdx + 1, 0}
+		otherLine, exists := lineMap[ending]
+		if !exists {
+			lineMap[beginning] = mergeLine
+			mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
+			continue
+		}
+		mergedBuffer := slices.Concat(mergeLine.Line, otherLine.Line)
+
+		// fmt.Println(fmt.Sprintf("\nmerged Buffer: %s\n", string(mergedBuffer)))
+		newLine := m.Line{ChunkIdx: cIdx, Line: mergedBuffer, LineIdx: lIdx}
+		delete(lineMap, beginning)
+		// delete(lineMap, beginning)
+		fullLineChan <- newLine
+	}
+	// TODO: here is the issue
+	close(mergeChan)
+	close(fullLineChan)
 }
