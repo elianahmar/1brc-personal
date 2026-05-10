@@ -126,22 +126,29 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 				fullLineChan <- mergeLine
 				continue
 			}
+			// If the line we just received is beginning of a chunk. Put it in map and continue
 			beginning := [2]int{cIdx, lIdx}
+			if lIdx == 0 {
+				lineMap[beginning] = mergeLine
+				continue
+			}
 			ending := [2]int{cIdx + 1, 0}
 			otherLine, exists := lineMap[ending]
 			if !exists {
 				lineMap[beginning] = mergeLine
-				// mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
+				mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
 				continue
 			}
 			mergedBuffer := slices.Concat(mergeLine.Line, otherLine.Line)
 
-			fmt.Println(fmt.Sprintf("\nmerged Buffer %s\n", string(mergedBuffer)))
+			fmt.Println(fmt.Sprintf("\nmerged Buffer: %s\n", string(mergedBuffer)))
 			newLine := m.Line{ChunkIdx: cIdx, Line: mergedBuffer, LineIdx: lIdx}
 			delete(lineMap, beginning)
-			delete(lineMap, ending)
+			// delete(lineMap, beginning)
 			fullLineChan <- newLine
 		}
+		close(mergeChan)
+		close(fullLineChan)
 	}(totalChunks, fullLineChan)
 	wg.Wait()
 	linesRead := ops.Load()
