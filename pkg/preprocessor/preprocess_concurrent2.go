@@ -53,7 +53,8 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 	wg.Wait()
 	fmt.Printf("time taken to process all the bytes %f\n", time.Since(readFileStart).Seconds())
 
-	return cutLinesConcurrent(readChunks)
+	measurements := cutLinesConcurrent(readChunks)
+	return measurements
 }
 
 // What is the idea here? I have multiple chunks of bytes that I have to reconcile somehow. At the boundaries they will be cutoff
@@ -87,15 +88,18 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 				fullLineChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[i], LineIdx: i}
 			}
 		}
+		close(mergeChan)
 	}(wg)
 
 	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
 	measurements := make(map[model.City]*model.Measurement)
 	totalChunks := len(readChunks)
+	go processMergeChan(totalChunks, fullLineChan, mergeChan, wg)
 
 	go consumeFullLines(measurements, fullLineChan, wg, ops, mu)
-	go processMergeChan(totalChunks, fullLineChan, mergeChan, wg)
+	fmt.Println("all go routines running")
 	wg.Wait()
+	fmt.Println("all lines processed. Time to calculate the answers")
 	linesRead := ops.Load()
 	utils.PanicOnCondition(linesRead != 1000000000, fmt.Sprintf("did not process all lines. Lines read = %d", linesRead))
 	return measurements
@@ -150,6 +154,5 @@ func processMergeChan(totalChunks int, fullLineChan chan m.Line, mergeChan chan 
 		fullLineChan <- newLine
 	}
 	// TODO: here is the issue
-	close(mergeChan)
 	close(fullLineChan)
 }
