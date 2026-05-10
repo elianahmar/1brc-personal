@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"fmt"
 	"math"
+	"time"
 )
 
 func TruncateNaive(f float64, unit float64) float64 {
@@ -30,4 +32,9 @@ func First[T any](items []T, fn func(T) bool) int {
 		}
 	}
 	return -1
+}
+
+func DayMonthYear() string {
+	timestamp := time.Now()
+	return fmt.Sprintf("%d-%s-%d", timestamp.Day(), timestamp.Month().String(), timestamp.Year())
 }
