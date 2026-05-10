@@ -21,28 +21,25 @@ func main() {
 	// Start CPU and Memory Profiling
 	// runtime.SetCPUProfileRate(1)
 	runtime.SetBlockProfileRate(1)
+	cpuProfile := utils.PanicOnError(os.Create("cpu.prof"))
+	memProfile := utils.PanicOnError(os.Create("mem.prof"))
+	utils.PanicOnError(struct{}{}, pprof.StartCPUProfile(cpuProfile))
+	defer func(cpuProfile *os.File, memProfile *os.File) {
+		cpuProfile.Close()
+		memProfile.Close()
+		pprof.StopCPUProfile()
+	}(cpuProfile, memProfile)
+
 	start := time.Now()
+
 	runCalculations()
+
+	utils.PanicOnError(struct{}{}, pprof.WriteHeapProfile(memProfile))
 	fmt.Printf("Time taken: %2f", time.Since(start).Seconds())
 }
 
 func runCalculations() {
-	// PProf
-	cpuProfile := utils.PanicOnError(os.Create("cpu.prof"))
-	memProfile := utils.PanicOnError(os.Create("mem.prof"))
-	defer func(cpuProfile *os.File, memProfile *os.File) {
-		cpuProfile.Close()
-		memProfile.Close()
-	}(cpuProfile, memProfile)
-
-	utils.PanicOnError(struct{}{}, pprof.StartCPUProfile(cpuProfile))
-	defer pprof.StopCPUProfile()
-
-	// Run the script
-	// measurements := pre.ReadFile("../1brc-go/measurements.txt", 1000)
-	measurements := pre.ReadFileConcurrent("../1brc-go/measurements.txt")
+	measurements := pre.ReadFileConcurrent2("../1brc-go/measurements.txt")
 	compute.ComputeAvg(measurements)
 	validator.ValidateCorrectness(measurements)
-
-	utils.PanicOnError(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }
