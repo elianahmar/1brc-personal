@@ -15,6 +15,7 @@ import (
 
 // TODO:
 // - Optional. Add some command line args for channel size
+// - append date to cpu.prof, mem.prof so I have multiple dumps to see progress
 
 func main() {
 	// Start CPU and Memory Profiling
@@ -27,8 +28,12 @@ func main() {
 }
 
 func runCalculations() {
-	cpuProfile := utils.PanicOnError(os.Create("cpu.prof"))
-	memProfile := utils.PanicOnError(os.Create("mem.prof"))
+	dayMonthYear := utils.DayMonthYear()
+	cpuFile := fmt.Sprintf("%s-cpu.prof", dayMonthYear)
+	memFile := fmt.Sprintf("%s-mem.prof", dayMonthYear)
+
+	cpuProfile := utils.PanicOnError(os.Create(cpuFile))
+	memProfile := utils.PanicOnError(os.Create(memFile))
 	defer func(cpuProfile *os.File, memProfile *os.File) {
 		cpuProfile.Close()
 		memProfile.Close()
