@@ -106,7 +106,6 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 			UpdateMeasurement(measurements, city, temp)
 			mu.Unlock()
 		}
-		close(fullLineChan)
 	}(measurements, fullLineChan)
 
 	// TODO: Consumer 2 for bad lines
@@ -143,7 +142,6 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 			delete(lineMap, ending)
 			fullLineChan <- newLine
 		}
-		close(mergeChan)
 	}(totalChunks, fullLineChan)
 	wg.Wait()
 	linesRead := ops.Load()
