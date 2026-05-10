@@ -17,3 +17,24 @@ type Measurement struct {
 	Max   float64
 	Avg   float64
 }
+
+type ReadChunk struct {
+	Buffer []byte
+	Offset int
+	Idx    int
+}
+
+type Chunk struct {
+	BufSize int
+	Offset  int
+	Idx     int
+}
+
+type Line struct {
+	// What chunk it appears in
+	ChunkIdx int
+	// Full line as byte slice
+	Line []byte
+	// Index of the line after we split the bytes on '\n'
+	LineIdx int
+}
