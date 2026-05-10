@@ -54,3 +54,13 @@ Showing top 10 nodes out of 64
 ### 6th Day 5/9/26
 - Okay, did some more profiling and saw that reading the file concurrently took 11 seconds. That's blazing fast. SO I think the main concern now, is that I need to intelligently correct lines at the boundary point.
 - My overall performance for the concurrent implementation became worse. But I think I will need to optimize how I bring the chunks together. I have some ideas but will have to see. Maybe at the offset, I could splitN instead
+- Program seems to be deadlocking or blocking somehow. Probably not closing channels in the correct ordering
+
+
+
+### 7th Day 5/10/26
+- Fixed the blocking issue by analyzing how channels were pushing data. I have one channel that pushes to a mergeChan which is for the lines that are at boundary points. And I realized that I need to close that channel once I finish producing for it. 
+- In the mergeChan, I need to close the fullLineChan after we have processed all of the boundary lines and this solved the blocking issue. Had to think about it. But I got it. Synchronization is hard...
+- Ran on the full data and I'm seeing it take 793 seconds (13 minutes)
+- Reading file concurrently takes 10-15 seconds which is really good. However, consuming the lines is taking too long. My idea there is to simply create more consumers
+- I have some ideas to optimize 

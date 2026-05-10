@@ -14,22 +14,27 @@ import (
 )
 
 // TODO:
-// - No matter how slow, get a working solution to have a baseline
 // - Optional. Add some command line args for channel size
+// - append date to cpu.prof, mem.prof so I have multiple dumps to see progress -> DONE
+// - Move the dumps to directories that are titled with day month year, then append the seconds so we can see clearly
 
 func main() {
 	// Start CPU and Memory Profiling
 	// runtime.SetCPUProfileRate(1)
 	runtime.SetBlockProfileRate(1)
+
 	start := time.Now()
 	runCalculations()
 	fmt.Printf("Time taken: %2f", time.Since(start).Seconds())
 }
 
 func runCalculations() {
-	// PProf
-	cpuProfile := utils.PanicOnError(os.Create("cpu.prof"))
-	memProfile := utils.PanicOnError(os.Create("mem.prof"))
+	dayMonthYear := utils.DayMonthYear()
+	cpuFile := fmt.Sprintf("%s-cpu.prof", dayMonthYear)
+	memFile := fmt.Sprintf("%s-mem.prof", dayMonthYear)
+
+	cpuProfile := utils.PanicOnError(os.Create(cpuFile))
+	memProfile := utils.PanicOnError(os.Create(memFile))
 	defer func(cpuProfile *os.File, memProfile *os.File) {
 		cpuProfile.Close()
 		memProfile.Close()
@@ -38,11 +43,11 @@ func runCalculations() {
 	utils.PanicOnError(struct{}{}, pprof.StartCPUProfile(cpuProfile))
 	defer pprof.StopCPUProfile()
 
-	// Run the script
-	// measurements := pre.ReadFile("../1brc-go/measurements.txt", 1000)
-	measurements := pre.ReadFileConcurrent("../1brc-go/measurements.txt")
+	measurements := pre.ReadFileConcurrent2("../1brc-go/measurements.txt")
+	fmt.Println("Read the file and processed the lines")
 	compute.ComputeAvg(measurements)
+	fmt.Println("Computed the averages. Time to validate")
 	validator.ValidateCorrectness(measurements)
-
+	fmt.Println("Finished validating the answers")
 	utils.PanicOnError(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }
