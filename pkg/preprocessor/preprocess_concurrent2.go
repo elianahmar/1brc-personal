@@ -66,13 +66,13 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 		fullLineChan = make(chan m.Line, len(readChunks)-1)
 		newline      = []byte{'\n'}
 		wg           = &sync.WaitGroup{}
-		ops          = atomic.Uint64{}
-		mu           = sync.Mutex{}
+		ops          = &atomic.Uint64{}
+		mu           = &sync.Mutex{}
 	)
 
 	wg.Add(3)
 	// Producer
-	go func() {
+	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		for _, chunk := range readChunks { // TODO: I could even split this up using go routines
 			// TODO: come back to the merge line case in a bit
@@ -87,36 +87,14 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 				fullLineChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[i], LineIdx: i}
 			}
 		}
-	}()
+	}(wg)
 
 	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
 	measurements := make(map[model.City]*model.Measurement)
-	go func(measurements map[model.City]*model.Measurement, fullLineChan chan m.Line) {
-		defer wg.Done()
-		for goodLine := range fullLineChan {
-			ops.Add(1)
-			// line := lineSeparated[i]
-			// utils.PanicOnCondition(len(line) <= 0, fmt.Sprintf("line %d/%d is empty... shouldn't happen. Chunk index: %d, total chunks: %d", i, len(lineSeparated), chunk.idx, numChunks))
-			// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
-			city, temp, err := processLineByte(goodLine)
-			if err != nil {
-				continue
-			}
-			mu.Lock()
-			UpdateMeasurement(measurements, city, temp)
-			mu.Unlock()
-		}
-	}(measurements, fullLineChan)
+	go consumeFullLines(measurements, fullLineChan, wg, ops, mu)
 
-	// TODO: Consumer 2 for bad lines
-	// 1. Consume the bad lines
-	// 2. Pair up the bad lines
-	// To do that, I have the line info (chunkIDX, lineIDX)
-	// Case:
-	//	- (c_i, l_a) -> (c_i+1, l_0) "Chunk at index i with line idx a > 0 with next chunk line idx = 0"
-	// 3. After pairing it, I need to push it to good line
 	totalChunks := len(readChunks)
-	go func(totalChunks int, fullLineChan chan m.Line) {
+	go func(totalChunks int, fullLineChan chan m.Line, mergeChan chan m.Line, wg *sync.WaitGroup) {
 		defer wg.Done()
 		lineMap := make(map[[2]int]m.Line)
 		for mergeLine := range mergeChan {
@@ -141,7 +119,7 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 			}
 			mergedBuffer := slices.Concat(mergeLine.Line, otherLine.Line)
 
-			fmt.Println(fmt.Sprintf("\nmerged Buffer: %s\n", string(mergedBuffer)))
+			// fmt.Println(fmt.Sprintf("\nmerged Buffer: %s\n", string(mergedBuffer)))
 			newLine := m.Line{ChunkIdx: cIdx, Line: mergedBuffer, LineIdx: lIdx}
 			delete(lineMap, beginning)
 			// delete(lineMap, beginning)
@@ -149,9 +127,26 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 		}
 		close(mergeChan)
 		close(fullLineChan)
-	}(totalChunks, fullLineChan)
+	}(totalChunks, fullLineChan, mergeChan, wg)
 	wg.Wait()
 	linesRead := ops.Load()
 	utils.PanicOnCondition(linesRead != 1000000000, fmt.Sprintf("did not process all lines. Lines read = %d", linesRead))
 	return measurements
+}
+
+func consumeFullLines(measurements map[model.City]*model.Measurement, fullLineChan chan m.Line, wg *sync.WaitGroup, ops *atomic.Uint64, mu *sync.Mutex) {
+	defer wg.Done()
+	for goodLine := range fullLineChan {
+		ops.Add(1)
+		// line := lineSeparated[i]
+		// utils.PanicOnCondition(len(line) <= 0, fmt.Sprintf("line %d/%d is empty... shouldn't happen. Chunk index: %d, total chunks: %d", i, len(lineSeparated), chunk.idx, numChunks))
+		// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
+		city, temp, err := processLineByte(goodLine)
+		if err != nil {
+			continue
+		}
+		mu.Lock()
+		UpdateMeasurement(measurements, city, temp)
+		mu.Unlock()
+	}
 }
