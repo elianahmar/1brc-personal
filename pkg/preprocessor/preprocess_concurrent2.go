@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -50,7 +51,7 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 		}(i)
 	}
 	wg.Wait()
-	fmt.Println("time taken to process all the bytes %2f", time.Since(readFileStart).Seconds())
+	fmt.Printf("time taken to process all the bytes %f\n", time.Since(readFileStart).Seconds())
 
 	return cutLinesConcurrent(readChunks)
 }
@@ -90,22 +91,23 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 
 	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
 	measurements := make(map[model.City]*model.Measurement)
-	go func(measurements map[model.City]*model.Measurement) {
+	go func(measurements map[model.City]*model.Measurement, fullLineChan chan m.Line) {
 		defer wg.Done()
 		for goodLine := range fullLineChan {
 			ops.Add(1)
 			// line := lineSeparated[i]
 			// utils.PanicOnCondition(len(line) <= 0, fmt.Sprintf("line %d/%d is empty... shouldn't happen. Chunk index: %d, total chunks: %d", i, len(lineSeparated), chunk.idx, numChunks))
 			// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
-			city, temp, err := processLineByte(goodLine.Line)
+			city, temp, err := processLineByte(goodLine)
 			if err != nil {
 				continue
 			}
 			mu.Lock()
-			updateMeasurement(measurements, city, temp)
+			UpdateMeasurement(measurements, city, temp)
 			mu.Unlock()
 		}
-	}(measurements)
+		close(fullLineChan)
+	}(measurements, fullLineChan)
 
 	// TODO: Consumer 2 for bad lines
 	// 1. Consume the bad lines
@@ -122,20 +124,26 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 			// Loc[0] = chunk idx, Loc[1] = line index
 			cIdx, lIdx := mergeLine.ChunkIdx, mergeLine.LineIdx
 			if (cIdx == 0 && lIdx == 0) || (cIdx == totalChunks-1 && lIdx > 0) {
-				fullLineChan <- m.Line{ChunkIdx: cIdx, Line: mergeLine.Line, LineIdx: lIdx}
+				fullLineChan <- mergeLine
 				continue
 			}
-			beginnning := [2]int{cIdx, lIdx}
+			beginning := [2]int{cIdx, lIdx}
 			ending := [2]int{cIdx + 1, 0}
 			otherLine, exists := lineMap[ending]
 			if !exists {
-				lineMap[beginnning] = mergeLine
-				mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
+				lineMap[beginning] = mergeLine
+				// mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
 				continue
 			}
-			mergeLine.Line = append(mergeLine.Line, otherLine.Line...)
-			fullLineChan <- mergeLine
+			mergedBuffer := slices.Concat(mergeLine.Line, otherLine.Line)
+
+			fmt.Println(fmt.Sprintf("\nmerged Buffer %s\n", string(mergedBuffer)))
+			newLine := m.Line{ChunkIdx: cIdx, Line: mergedBuffer, LineIdx: lIdx}
+			delete(lineMap, beginning)
+			delete(lineMap, ending)
+			fullLineChan <- newLine
 		}
+		close(mergeChan)
 	}(totalChunks, fullLineChan)
 	wg.Wait()
 	linesRead := ops.Load()
