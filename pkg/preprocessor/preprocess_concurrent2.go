@@ -65,7 +65,6 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 	var (
 		mergeChan    = make(chan m.Line, len(readChunks)-1)
 		fullLineChan = make(chan m.Line, len(readChunks)-1)
-		newline      = []byte{'\n'}
 		wg           = &sync.WaitGroup{}
 		ops          = &atomic.Uint64{}
 		mu           = &sync.Mutex{}
@@ -73,24 +72,7 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 
 	wg.Add(3)
 	// Producer
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-		for _, chunk := range readChunks { // TODO: I could even split this up using go routines
-			// TODO: come back to the merge line case in a bit
-			splitLines := bytes.Split(chunk.Buffer, newline)
-			linesToProcess := len(splitLines)
-			// Push the very first and very last line
-			mergeChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[0], LineIdx: 0}
-			mergeChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[linesToProcess-1], LineIdx: linesToProcess}
-
-			// NOTE: it's guaranteed that anything between first and last line will be a good line
-			for i := 1; i < linesToProcess-1; i++ {
-				fullLineChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[i], LineIdx: i}
-			}
-		}
-		close(mergeChan)
-	}(wg)
-
+	go processChunks(wg, readChunks, mergeChan, fullLineChan)
 	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
 	measurements := make(map[model.City]*model.Measurement)
 	totalChunks := len(readChunks)
@@ -188,4 +170,23 @@ func processMergeChan(totalChunks int, fullLineChan chan m.Line, mergeChan chan 
 		fullLineChan <- newLine
 	}
 	close(fullLineChan)
+}
+
+func processChunks(wg *sync.WaitGroup, readChunks []*m.ReadChunk, mergeChan, fullLineChan chan m.Line) {
+	defer wg.Done()
+	newline := []byte{'\n'}
+	for _, chunk := range readChunks { // TODO: I could even split this up using go routines
+		// TODO: come back to the merge line case in a bit
+		splitLines := bytes.Split(chunk.Buffer, newline)
+		linesToProcess := len(splitLines)
+		// Push the very first and very last line
+		mergeChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[0], LineIdx: 0}
+		mergeChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[linesToProcess-1], LineIdx: linesToProcess}
+
+		// NOTE: it's guaranteed that anything between first and last line will be a good line
+		for i := 1; i < linesToProcess-1; i++ {
+			fullLineChan <- m.Line{ChunkIdx: chunk.Idx, Line: splitLines[i], LineIdx: i}
+		}
+	}
+	close(mergeChan)
 }
