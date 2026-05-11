@@ -89,56 +89,29 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 
 func consumeFullLines(wg *sync.WaitGroup, fullLineChan chan m.Line, measurements map[model.City]*model.Measurement, ops *atomic.Uint64, mu *sync.Mutex) {
 	defer wg.Done()
-	for goodLine := range fullLineChan {
-		ops.Add(1)
-		// line := lineSeparated[i]
-		// utils.PanicOnCondition(len(line) <= 0, fmt.Sprintf("line %d/%d is empty... shouldn't happen. Chunk index: %d, total chunks: %d", i, len(lineSeparated), chunk.idx, numChunks))
-		// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
-		city, temp, err := processLineByte(goodLine)
-		if err != nil {
-			continue
-		}
-		mu.Lock()
-		UpdateMeasurement(measurements, city, temp)
-		mu.Unlock()
+	workers := 10
+	wg.Add(workers)
+	for range workers {
+		go func(fullLineChan chan m.Line) {
+			defer wg.Done()
+			for goodLine := range fullLineChan {
+				ops.Add(1)
+				// line := lineSeparated[i]
+				// utils.PanicOnCondition(len(line) <= 0, fmt.Sprintf("line %d/%d is empty... shouldn't happen. Chunk index: %d, total chunks: %d", i, len(lineSeparated), chunk.idx, numChunks))
+				// utils.PanicOnCondition(line[len(line)-1] == '\n', "line not processed correctly. Every line should end with new line break")
+				city, temp, err := processLineByte(goodLine)
+				if err != nil {
+					continue
+				}
+				mu.Lock()
+				UpdateMeasurement(measurements, city, temp)
+				mu.Unlock()
+			}
+		}(fullLineChan)
 	}
 }
 
 func processMergeChan2(wg *sync.WaitGroup, fullLineChan chan m.Line, mergeChan chan m.Line, totalChunks int) {
-	defer wg.Done()
-	lineMap := make(map[[2]int]m.Line)
-	for mergeLine := range mergeChan {
-		// Loc[0] = chunk idx, Loc[1] = line index
-		cIdx, lIdx := mergeLine.ChunkIdx, mergeLine.LineIdx
-		if (cIdx == 0 && lIdx == 0) || (cIdx == totalChunks-1 && lIdx > 0) {
-			fullLineChan <- mergeLine
-			continue
-		}
-		// If the line we just received is beginning of a chunk. Put it in map and continue
-		beginning := [2]int{cIdx, lIdx}
-		if lIdx == 0 {
-			lineMap[beginning] = mergeLine
-			continue
-		}
-		ending := [2]int{cIdx + 1, 0}
-		otherLine, exists := lineMap[ending]
-		if !exists {
-			lineMap[beginning] = mergeLine
-			mergeChan <- mergeLine // PERF: not sure if I can do this. Essentially requeuing the line until we find it's partner
-			continue
-		}
-		mergedBuffer := slices.Concat(mergeLine.Line, otherLine.Line)
-
-		// fmt.Println(fmt.Sprintf("\nmerged Buffer: %s\n", string(mergedBuffer)))
-		newLine := m.Line{ChunkIdx: cIdx, Line: mergedBuffer, LineIdx: lIdx}
-		delete(lineMap, beginning)
-		// delete(lineMap, beginning)
-		fullLineChan <- newLine
-	}
-	close(fullLineChan)
-}
-
-func processMergeChan(totalChunks int, fullLineChan chan m.Line, mergeChan chan m.Line, wg *sync.WaitGroup) {
 	defer wg.Done()
 	lineMap := make(map[[2]int]m.Line)
 	for mergeLine := range mergeChan {
