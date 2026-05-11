@@ -43,7 +43,7 @@ func runCalculations() {
 	utils.PanicOnError(struct{}{}, pprof.StartCPUProfile(cpuProfile))
 	defer pprof.StopCPUProfile()
 
-	measurements := pre.ReadFileConcurrent2("../1brc-go/measurements.txt")
+	measurements := pre.ReadFileConcurrent2("../1brc-go/small_measurements.txt")
 	fmt.Println("Read the file and processed the lines")
 	compute.ComputeAvg(measurements)
 	fmt.Println("Computed the averages. Time to validate")

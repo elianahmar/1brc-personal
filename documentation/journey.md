@@ -61,6 +61,6 @@ Showing top 10 nodes out of 64
 ### 7th Day 5/10/26
 - Fixed the blocking issue by analyzing how channels were pushing data. I have one channel that pushes to a mergeChan which is for the lines that are at boundary points. And I realized that I need to close that channel once I finish producing for it. 
 - In the mergeChan, I need to close the fullLineChan after we have processed all of the boundary lines and this solved the blocking issue. Had to think about it. But I got it. Synchronization is hard...
-- Ran on the full data and I'm seeing it take 793 seconds (13 minutes)
+- Ran on the full data and I'm seeing it take **793 seconds (13 minutes)**
 - Reading file concurrently takes 10-15 seconds which is really good. However, consuming the lines is taking too long. My idea there is to simply create more consumers
 - I have some ideas to optimize 
