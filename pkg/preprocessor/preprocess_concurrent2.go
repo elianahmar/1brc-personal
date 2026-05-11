@@ -70,14 +70,14 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 		mu           = &sync.Mutex{}
 	)
 
+	measurements := make(map[model.City]*model.Measurement)
+	totalChunks := len(readChunks)
 	wg.Add(3)
 	// Producer
 	go processChunks(wg, readChunks, mergeChan, fullLineChan)
 	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
-	measurements := make(map[model.City]*model.Measurement)
-	totalChunks := len(readChunks)
-	go processMergeChan2(totalChunks, fullLineChan, mergeChan, wg)
-	go consumeFullLines(measurements, fullLineChan, wg, ops, mu)
+	go processMergeChan2(wg, fullLineChan, mergeChan, totalChunks)
+	go consumeFullLines(wg, fullLineChan, measurements, ops, mu)
 
 	fmt.Println("all go routines running")
 	wg.Wait()
@@ -87,7 +87,7 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 	return measurements
 }
 
-func consumeFullLines(measurements map[model.City]*model.Measurement, fullLineChan chan m.Line, wg *sync.WaitGroup, ops *atomic.Uint64, mu *sync.Mutex) {
+func consumeFullLines(wg *sync.WaitGroup, fullLineChan chan m.Line, measurements map[model.City]*model.Measurement, ops *atomic.Uint64, mu *sync.Mutex) {
 	defer wg.Done()
 	for goodLine := range fullLineChan {
 		ops.Add(1)
@@ -104,7 +104,7 @@ func consumeFullLines(measurements map[model.City]*model.Measurement, fullLineCh
 	}
 }
 
-func processMergeChan2(totalChunks int, fullLineChan chan m.Line, mergeChan chan m.Line, wg *sync.WaitGroup) {
+func processMergeChan2(wg *sync.WaitGroup, fullLineChan chan m.Line, mergeChan chan m.Line, totalChunks int) {
 	defer wg.Done()
 	lineMap := make(map[[2]int]m.Line)
 	for mergeLine := range mergeChan {
