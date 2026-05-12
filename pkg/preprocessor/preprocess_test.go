@@ -199,3 +199,81 @@ func benchmarkReadFile_Split(b *testing.B) {
 		bytes.Split(file, []byte{'\n'})
 	}
 }
+
+// Full Dataset: 17.573 seconds
+func BenchmarkBufioReader_ReadSlice(b *testing.B) {
+	for b.Loop() {
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		fileReader := bufio.NewReader(file)
+		for {
+			_, err := fileReader.ReadSlice('\n')
+			// fmt.Println(n)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				b.Fatalf("reader failed: %v", err)
+			}
+		}
+	}
+}
+
+// Full Dataset: 31.8 seconds... Makes sense ReadBytes() copies underlying array
+func BenchmarkBufioReader_ReadBytes(b *testing.B) {
+	for b.Loop() {
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		fileReader := bufio.NewReader(file)
+		for {
+			_, err := fileReader.ReadBytes('\n')
+			// fmt.Println(n)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				b.Fatalf("reader failed: %v", err)
+			}
+		}
+	}
+}
+
+// Full Dataset:
+func BenchmarkBufioReader_ReadLine(b *testing.B) {
+	for b.Loop() {
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		fileReader := bufio.NewReader(file)
+		for {
+			_, pref, err := fileReader.ReadLine()
+			// fmt.Println(n)
+			if err == io.EOF {
+				break
+			}
+			if err != nil || pref {
+				b.Fatalf("reader failed: %v", err)
+			}
+		}
+	}
+}
+
+// NOTE: for setting buffer; param 1 is the buffer size and param two is max token size
+// For large files it's ideal to have a large buffer, that way we can read many tokens into the buffer at once
+// The "token" in this case, is what we are telling the scanner to split on. Which in the default case is '\n'
+//
+// 1mb + Full Dataset -> 15.409s
+// 8mb + Full Dataset -> 16.3s
+// 4mb + Full Dataset -> 15.8s
+// 2mb + Full Dataset -> 15.8s
+// 2mb + 1mb maxtoken Full Dataset -> 15.0s
+func BenchmarkFileScanning_1mbBuffer(b *testing.B) { // 1.481s (Small Data) 15.690s full dataset
+	for b.Loop() {
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		defer file.Close()
+		mb := 2
+		bufSize := mb * 1024 * 1024
+		fileScanner := bufio.NewScanner(file)
+		fileScanner.Buffer(make([]byte, bufSize), 1024)
+		for fileScanner.Scan() {
+			fileScanner.Bytes()
+			// process the line itself
+		}
+	}
+}

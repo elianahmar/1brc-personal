@@ -28,6 +28,7 @@ func (p6 *P6) Compute() map[string]*model.Measurement { // 55 seconds. Minimal d
 	file := utils.PanicE(os.Open(p6.Path))
 	defer file.Close()
 	fileScanner := bufio.NewScanner(file)
+	fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
 	delim := []byte{';'}
 	measurements := make(map[string]*model.Measurement, 512) // 512 bc it's power of 2
 	for fileScanner.Scan() {
