@@ -158,7 +158,7 @@ func BenchmarkFileChunking(b *testing.B) {
 	}
 }
 
-func BenchmarkUnsafe(b *testing.B) {
+func benchmarkUnsafe(b *testing.B) {
 	for b.Loop() {
 		// 117 seconds. Fastest yet. All single threaded????
 		// Brute force this. Read line by line and update a table
@@ -182,5 +182,20 @@ func BenchmarkUnsafe(b *testing.B) {
 			measurements[cityName].Max = math.Max(measurements[cityName].Max, temp)
 			measurements[cityName].Min = math.Min(measurements[cityName].Min, temp)
 		}
+	}
+}
+
+// Small data: 1.484s, Full Dataset: 11.931s
+func BenchmarkReadFile(b *testing.B) {
+	for b.Loop() {
+		os.ReadFile("../../../1brc-go/measurements.txt")
+	}
+}
+
+// Full Dataset: 184 seconds. Will not be splitting
+func benchmarkReadFile_Split(b *testing.B) {
+	for b.Loop() {
+		file, _ := os.ReadFile("../../../1brc-go/measurements.txt")
+		bytes.Split(file, []byte{'\n'})
 	}
 }
