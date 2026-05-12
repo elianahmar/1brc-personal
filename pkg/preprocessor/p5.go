@@ -23,10 +23,6 @@ func NewP5(path string, chansize int) *P5 {
 	}
 }
 
-// THOUGHTS: To read concurrently, I will need to read each byte individually. However, that will pose another problem
-// If I chunk based on bytes, then there is a possibility of some lines being cut off. I would have to resolve those lines
-// Let me think about this. I read the entire line by line and create an object for each line. What if read in parallel, rejoin the entire
-
 func (p5 *P5) Compute() map[string]*model.Measurement { // 56 seconds. Fastest yet. All single threaded????
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p5.Path))

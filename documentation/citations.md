@@ -2,4 +2,4 @@
 - https://warrenu.github.io/posts/2025/09/goroutines-channels-patterns/
 - https://medium.com/swlh/processing-16gb-file-in-seconds-go-lang-3982c235dfa2
 - How to use "unsafe": https://dev.to/devflex-pro/how-to-use-unsafe-in-go-without-killing-your-service-699
-  - 
+- https://saraikin.com/posts/golang-unsafe/
