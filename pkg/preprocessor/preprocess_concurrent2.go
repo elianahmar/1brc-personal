@@ -25,7 +25,7 @@ func NewP3(path string) *P3 {
 	}
 }
 
-func (p3 *P3) ReadFileConcurrent() map[model.City]*model.Measurement {
+func (p3 *P3) Compute() map[model.City]*model.Measurement {
 	wg := &sync.WaitGroup{}
 	readFileStart := time.Now()
 	file := utils.PanicE(os.Open(p3.Path))
