@@ -26,3 +26,4 @@
 - add .gitignore
 - Objectify everything so that swapping out different implementations become easier
 - Add support for command line args
+- Utilize unsafe for zero allocations. Halved my runtime

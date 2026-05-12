@@ -3,15 +3,11 @@ package preprocessor
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"math"
 	"os"
 	"strconv"
-	"sync"
-	"time"
 
 	"github.com/throwea/1brc-go/pkg/model"
-	m "github.com/throwea/1brc-go/pkg/model"
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
@@ -57,46 +53,4 @@ func (p5 *P5) Compute() map[string]*model.Measurement { // 56 seconds. Fastest y
 		measurement.Min = math.Min(measurement.Min, temp)
 	}
 	return measurements
-}
-
-func (p5 *P5) ChunkFileRead() []*m.ReadChunk {
-	wg := &sync.WaitGroup{}
-	readFileStart := time.Now()
-	file := utils.PanicE(os.Open(p5.Path))
-	defer file.Close()
-
-	fileStats := utils.PanicE(file.Stat())
-	fileSizeBytes := fileStats.Size()
-	chunkSize := 100000 // characters
-
-	goRoutines := fileSizeBytes / int64(chunkSize)
-
-	hasLeftover := fileSizeBytes%int64(chunkSize) > 0
-	if hasLeftover {
-		goRoutines += 1
-	}
-	chunks := make([]m.Chunk, goRoutines)
-	for i := 0; i < int(goRoutines); i++ {
-		chunks[i].BufSize = chunkSize
-		chunks[i].Offset = i * chunkSize
-		chunks[i].Idx = i
-	}
-	readChunks := make([]*m.ReadChunk, goRoutines)
-
-	wg.Add(int(goRoutines))
-	// spawn go routines for reading each chunk
-	for i := 0; i < int(goRoutines); i++ {
-		go func(i int) {
-			defer wg.Done()
-			// fmt.Println("reading chunk %d", i)
-			chunk := &chunks[i]
-			buffer := make([]byte, chunk.BufSize)
-			file.ReadAt(buffer, int64(chunk.Offset))
-			readChunks[i] = &m.ReadChunk{Idx: i, Buffer: buffer, Offset: chunk.Offset}
-		}(i)
-	}
-	wg.Wait()
-	fmt.Printf("time taken to process all the bytes %f\n", time.Since(readFileStart).Seconds())
-
-	return readChunks
 }
