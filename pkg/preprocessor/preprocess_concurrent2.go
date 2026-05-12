@@ -14,7 +14,19 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
+type P3 struct {
+	Path     string
+	ChanSize int
+}
+
+func NewP3(path string, chansize int) *P3 {
+	return &P3{
+		Path:     path,
+		ChanSize: chansize,
+	}
+}
+
+func (p3 *P3) ReadFileConcurrent(path string) map[model.City]*model.Measurement {
 	wg := &sync.WaitGroup{}
 	readFileStart := time.Now()
 	file := utils.PanicE(os.Open(path))
@@ -53,7 +65,7 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 	wg.Wait()
 	fmt.Printf("time taken to process all the bytes %f\n", time.Since(readFileStart).Seconds())
 
-	measurements := cutLinesConcurrent(readChunks)
+	measurements := p3.cutLinesConcurrent(readChunks)
 	return measurements
 }
 
@@ -61,7 +73,7 @@ func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 // So I have two cases I have to deal with
 // So let's do this. First and last line go to merge chan. One edge case we need to deal with is if chunk == 0 and lineidx == 0 then we skip it or if it's the last chunk and last line. Since we can guarantee it's a valid line
 // For the rest, I'm still not clear how I will connect them all concurrently.
-func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measurement {
+func (p3 *P3) cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measurement {
 	var (
 		mergeChan    = make(chan m.Line, len(readChunks)-1)
 		fullLineChan = make(chan m.Line, len(readChunks)-1)
@@ -74,10 +86,10 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 	totalChunks := len(readChunks)
 	wg.Add(3)
 	// Producer
-	go processChunks(wg, readChunks, mergeChan, fullLineChan)
+	go p3.processChunks(wg, readChunks, mergeChan, fullLineChan)
 	// Consumer 1 for good lines. I think here I can have multiple go routines, processing Do that later though because I will need some more synchronization (i.e. mutex or atomics)
-	go processMergeChan(wg, fullLineChan, mergeChan, totalChunks)
-	go consumeFullLines(wg, fullLineChan, measurements, ops, mu)
+	go p3.processMergeChan(wg, fullLineChan, mergeChan, totalChunks)
+	go p3.consumeFullLines(wg, fullLineChan, measurements, ops, mu)
 
 	fmt.Println("all go routines running")
 	wg.Wait()
@@ -87,7 +99,7 @@ func cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measure
 	return measurements
 }
 
-func consumeFullLines(wg *sync.WaitGroup, fullLineChan chan m.Line, measurements map[model.City]*model.Measurement, ops *atomic.Uint64, mu *sync.Mutex) {
+func (p3 *P3) consumeFullLines(wg *sync.WaitGroup, fullLineChan chan m.Line, measurements map[model.City]*model.Measurement, ops *atomic.Uint64, mu *sync.Mutex) {
 	defer wg.Done()
 	workers := 10
 	wg.Add(workers)
@@ -111,7 +123,7 @@ func consumeFullLines(wg *sync.WaitGroup, fullLineChan chan m.Line, measurements
 	}
 }
 
-func processMergeChan(wg *sync.WaitGroup, fullLineChan chan m.Line, mergeChan chan m.Line, totalChunks int) {
+func (p3 *P3) processMergeChan(wg *sync.WaitGroup, fullLineChan chan m.Line, mergeChan chan m.Line, totalChunks int) {
 	defer wg.Done()
 	lineMap := make(map[[2]int]m.Line)
 	for mergeLine := range mergeChan {
@@ -145,7 +157,7 @@ func processMergeChan(wg *sync.WaitGroup, fullLineChan chan m.Line, mergeChan ch
 	close(fullLineChan)
 }
 
-func processChunks(wg *sync.WaitGroup, readChunks []*m.ReadChunk, mergeChan, fullLineChan chan m.Line) {
+func (p3 *P3) processChunks(wg *sync.WaitGroup, readChunks []*m.ReadChunk, mergeChan, fullLineChan chan m.Line) {
 	defer wg.Done()
 	newline := []byte{'\n'}
 	for _, chunk := range readChunks { // TODO: I could even split this up using go routines
