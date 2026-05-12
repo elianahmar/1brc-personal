@@ -20,7 +20,7 @@ func processLineByte(line m.Line) (model.City, float64, error) {
 	// fmt.Println("%v", split)
 	// utils.PanicOnCondition(len(split) != 2, "byte slice not containing both city and temp")
 	// fmt.Println(fmt.Sprintf("Line: %s, line idx: %d, chunk idx: %d", string(line.Line), line.LineIdx, line.ChunkIdx))
-	dig := utils.PanicOnError(strconv.ParseFloat(string(split[1]), 32))
+	dig := utils.PanicE(strconv.ParseFloat(string(split[1]), 32))
 	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
 	return model.City(split[0]), temp, nil
 }
