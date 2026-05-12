@@ -12,6 +12,18 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
+type P1 struct {
+	Path     string
+	ChanSize int
+}
+
+func NewP1(path string, chansize int) *P1 {
+	return &P1{
+		Path:     path,
+		ChanSize: chansize,
+	}
+}
+
 // THOUGHTS: To read concurrently, I will need to read each byte individually. However, that will pose another problem
 // If I chunk based on bytes, then there is a possibility of some lines being cut off. I would have to resolve those lines
 // Let me think about this. I read the entire line by line and create an object for each line. What if read in parallel, rejoin the entire
@@ -20,7 +32,7 @@ import (
 // TODO: this is where a majority of the optimizations will need to be made
 // For context: we only process 413 cities in total. A majority of the time is gonna be from just
 // reading the file
-func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
+func (p1 *P1) ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	dataChan := make(chan string, chanSize)
 	wg := &sync.WaitGroup{}
 	file := utils.PanicE(os.Open(path))
@@ -38,20 +50,20 @@ func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 
 	wg.Add(2)
 	// Producer consumer pattern. Consumers will stop receiving once the channel is closed
-	go pushLines(fileScanner, dataChan, chanSize, wg)
-	go collectData(dataChan, measurementChan, chanSize, wg)
+	go p1.pushLines(fileScanner, dataChan, chanSize, wg)
+	go p1.collectData(dataChan, measurementChan, chanSize, wg)
 	wg.Wait()
 
 	return <-measurementChan
 }
 
-func collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int, wg *sync.WaitGroup) {
+func (p1 *P1) collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	measurements := make(map[model.City]*model.Measurement, 500)
 	linesProcessed := 0
 	for text := range data {
 		linesProcessed += 1
-		city, temp := processLine(text)
+		city, temp := p1.processLine(text)
 
 		if _, exists := measurements[city]; !exists {
 			measurements[city] = &model.Measurement{City: city}
@@ -67,13 +79,13 @@ func collectData(data chan string, measurementChan chan map[model.City]*model.Me
 	close(measurementChan)
 }
 
-func pushLines(fileScanner *bufio.Scanner, dataChan chan string, chanSize int, wg *sync.WaitGroup) {
+func (p1 *P1) pushLines(fileScanner *bufio.Scanner, dataChan chan string, chanSize int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	naiveLineScanner(fileScanner, dataChan, chanSize)
+	p1.naiveLineScanner(fileScanner, dataChan, chanSize)
 	close(dataChan)
 }
 
-func naiveLineScanner(fileScanner *bufio.Scanner, dataChan chan string, chanSize int) {
+func (p1 *P1) naiveLineScanner(fileScanner *bufio.Scanner, dataChan chan string, chanSize int) {
 	lines := chanSize
 	for fileScanner.Scan() {
 		text := fileScanner.Text()
@@ -85,7 +97,7 @@ func naiveLineScanner(fileScanner *bufio.Scanner, dataChan chan string, chanSize
 	}
 }
 
-func processLine(text string) (model.City, float64) {
+func (p1 *P1) processLine(text string) (model.City, float64) {
 	split := strings.Split(text, ";")
 	dig := utils.PanicE(strconv.ParseFloat(split[1], 64))
 	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
