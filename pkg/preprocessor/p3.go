@@ -25,7 +25,7 @@ func NewP3(path string) *P3 {
 	}
 }
 
-func (p3 *P3) Compute() map[model.City]*model.Measurement {
+func (p3 *P3) Compute() map[string]*model.Measurement {
 	wg := &sync.WaitGroup{}
 	readFileStart := time.Now()
 	file := utils.PanicE(os.Open(p3.Path))
@@ -72,7 +72,7 @@ func (p3 *P3) Compute() map[model.City]*model.Measurement {
 // So I have two cases I have to deal with
 // So let's do this. First and last line go to merge chan. One edge case we need to deal with is if chunk == 0 and lineidx == 0 then we skip it or if it's the last chunk and last line. Since we can guarantee it's a valid line
 // For the rest, I'm still not clear how I will connect them all concurrently.
-func (p3 *P3) cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*model.Measurement {
+func (p3 *P3) cutLinesConcurrent(readChunks []*m.ReadChunk) map[string]*model.Measurement {
 	var (
 		mergeChan    = make(chan m.Line, len(readChunks)-1)
 		fullLineChan = make(chan m.Line, len(readChunks)-1)
@@ -81,7 +81,7 @@ func (p3 *P3) cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*mode
 		mu           = &sync.Mutex{}
 	)
 
-	measurements := make(map[model.City]*model.Measurement)
+	measurements := make(map[string]*model.Measurement)
 	totalChunks := len(readChunks)
 	wg.Add(3)
 	// Producer
@@ -98,7 +98,7 @@ func (p3 *P3) cutLinesConcurrent(readChunks []*m.ReadChunk) map[model.City]*mode
 	return measurements
 }
 
-func (p3 *P3) consumeFullLines(wg *sync.WaitGroup, fullLineChan chan m.Line, measurements map[model.City]*model.Measurement, ops *atomic.Uint64, mu *sync.Mutex) {
+func (p3 *P3) consumeFullLines(wg *sync.WaitGroup, fullLineChan chan m.Line, measurements map[string]*model.Measurement, ops *atomic.Uint64, mu *sync.Mutex) {
 	defer wg.Done()
 	workers := 10
 	wg.Add(workers)

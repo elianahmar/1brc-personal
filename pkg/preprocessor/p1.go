@@ -29,7 +29,7 @@ func NewP1(path string, chansize int) *P1 {
 // If I chunk based on bytes, then there is a possibility of some lines being cut off. I would have to resolve those lines
 // Let me think about this. I read the entire line by line and create an object for each line. What if read in parallel, rejoin the entire
 
-func (p1 *P1) Compute() map[model.City]*model.Measurement { // 509 seconds (over 8 minutes)
+func (p1 *P1) Compute() map[string]*model.Measurement { // 509 seconds (over 8 minutes)
 	dataChan := make(chan string, p1.ChanSize)
 	wg := &sync.WaitGroup{}
 	file := utils.PanicE(os.Open(p1.Path))
@@ -43,7 +43,7 @@ func (p1 *P1) Compute() map[model.City]*model.Measurement { // 509 seconds (over
 	// We start another go routine which is receiving from the data channel and updating a map
 	// once the data chan is closed we will exit from collect data and push the map to the measurement chan
 	// Simple producer consumer pattern
-	measurementChan := make(chan map[model.City]*model.Measurement, 1)
+	measurementChan := make(chan map[string]*model.Measurement, 1)
 
 	wg.Add(2)
 	// Producer consumer pattern. Consumers will stop receiving once the channel is closed
@@ -54,9 +54,9 @@ func (p1 *P1) Compute() map[model.City]*model.Measurement { // 509 seconds (over
 	return <-measurementChan
 }
 
-func (p1 *P1) collectData(data chan string, measurementChan chan map[model.City]*model.Measurement, linesToProcess int, wg *sync.WaitGroup) {
+func (p1 *P1) collectData(data chan string, measurementChan chan map[string]*model.Measurement, linesToProcess int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	measurements := make(map[model.City]*model.Measurement, 500)
+	measurements := make(map[string]*model.Measurement, 500)
 	linesProcessed := 0
 	for text := range data {
 		linesProcessed += 1
@@ -94,9 +94,9 @@ func (p1 *P1) naiveLineScanner(fileScanner *bufio.Scanner, dataChan chan string,
 	}
 }
 
-func (p1 *P1) processLine(text string) (model.City, float64) {
+func (p1 *P1) processLine(text string) (string, float64) {
 	split := strings.Split(text, ";")
 	dig := utils.PanicE(strconv.ParseFloat(split[1], 64))
 	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
-	return model.City(split[0]), temp
+	return string(split[0]), temp
 }

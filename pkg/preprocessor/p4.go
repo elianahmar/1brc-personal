@@ -27,13 +27,13 @@ func NewP4(path string, chansize int) *P4 {
 // If I chunk based on bytes, then there is a possibility of some lines being cut off. I would have to resolve those lines
 // Let me think about this. I read the entire line by line and create an object for each line. What if read in parallel, rejoin the entire
 
-func (p4 *P4) Compute() map[string]*model.Measurement2 {
+func (p4 *P4) Compute() map[string]*model.Measurement {
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p4.Path))
 	defer file.Close()
 	fileScanner := bufio.NewScanner(file)
 	delim := []byte{';'}
-	measurements := make(map[string]*model.Measurement2, 512) // 512 bc it's power of 2
+	measurements := make(map[string]*model.Measurement, 512) // 512 bc it's power of 2
 	for fileScanner.Scan() {
 		line := fileScanner.Bytes()
 		// process the line itself
@@ -42,7 +42,7 @@ func (p4 *P4) Compute() map[string]*model.Measurement2 {
 		utils.PanicIf(!found, "bytes not found?")
 		temp := utils.PanicE(strconv.ParseFloat(string(num), 64))
 		if _, exists := measurements[cityName]; !exists {
-			measurements[cityName] = &model.Measurement2{City: cityName}
+			measurements[cityName] = &model.Measurement{City: cityName}
 		}
 		measurements[cityName].Temps += temp
 		measurements[cityName].Count += 1

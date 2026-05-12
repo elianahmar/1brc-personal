@@ -1,7 +1,5 @@
 package model
 
-type City string
-
 type Compute interface {
 	Compute() map[string]*Measurement
 }
@@ -12,17 +10,8 @@ type Validation struct {
 	Avg  float64
 }
 
-type Measurement2 struct {
-	City  string
-	Temps float64
-	Count float64
-	Min   float64
-	Max   float64
-	Avg   float64
-}
-
 type Measurement struct {
-	City  City
+	City  string
 	Temps float64
 	Count float64
 	Min   float64
