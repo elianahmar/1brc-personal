@@ -9,6 +9,7 @@ import (
 
 	"github.com/throwea/1brc-go/pkg/compute"
 	"github.com/throwea/1brc-go/pkg/files"
+	"github.com/throwea/1brc-go/pkg/model"
 	pre "github.com/throwea/1brc-go/pkg/preprocessor"
 	"github.com/throwea/1brc-go/pkg/utils"
 	"github.com/throwea/1brc-go/pkg/validator"
@@ -45,9 +46,11 @@ func runCalculations() {
 	utils.PanicE(struct{}{}, pprof.StartCPUProfile(cpuProfile))
 	defer pprof.StopCPUProfile()
 
-	p3 := pre.NewP3("../1brc-go/small_measurements.txt")
-	measurements := p3.ReadFileConcurrent()
+	// p3 := pre.NewP3("../1brc-go/small_measurements.txt")
+	// measurements := p3.ReadFileConcurrent()
+	processor := selectImplementation(impl, path, chansize)
 	fmt.Println("Read the file and processed the lines")
+	processor.Compute()
 	compute.ComputeAvg(measurements)
 	fmt.Println("Computed the averages. Time to validate")
 	validator.ValidateCorrectness(measurements)
@@ -55,13 +58,19 @@ func runCalculations() {
 	utils.PanicE(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }
 
-func selectImplementation(impl string) model.Compute {
+func selectImplementation(impl, path string, chansize *int) model.Compute {
 	switch impl {
 	case "p1":
+		// TODO: add default
+		return pre.NewP1(path, *chansize)
 	case "p2":
+		return pre.NewP3(path)
 	case "p3":
+		panic("not implemented")
 	case "p4":
+		panic("not implemented")
 	case "p5":
-
+		panic("not implemented")
 	}
+	return nil
 }
