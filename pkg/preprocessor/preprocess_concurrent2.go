@@ -17,10 +17,10 @@ import (
 func ReadFileConcurrent2(path string) map[model.City]*model.Measurement {
 	wg := &sync.WaitGroup{}
 	readFileStart := time.Now()
-	file := utils.PanicOnError(os.Open(path))
+	file := utils.PanicE(os.Open(path))
 	defer file.Close()
 
-	fileStats := utils.PanicOnError(file.Stat())
+	fileStats := utils.PanicE(file.Stat())
 	fileSizeBytes := fileStats.Size()
 	chunkSize := 100000 // characters
 

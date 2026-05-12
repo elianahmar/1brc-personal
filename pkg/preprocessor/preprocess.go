@@ -23,7 +23,7 @@ import (
 func ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
 	dataChan := make(chan string, chanSize)
 	wg := &sync.WaitGroup{}
-	file := utils.PanicOnError(os.Open(path))
+	file := utils.PanicE(os.Open(path))
 	defer file.Close()
 
 	fileScanner := bufio.NewScanner(file)
@@ -87,7 +87,7 @@ func naiveLineScanner(fileScanner *bufio.Scanner, dataChan chan string, chanSize
 
 func processLine(text string) (model.City, float64) {
 	split := strings.Split(text, ";")
-	dig := utils.PanicOnError(strconv.ParseFloat(split[1], 64))
+	dig := utils.PanicE(strconv.ParseFloat(split[1], 64))
 	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
 	return model.City(split[0]), temp
 }

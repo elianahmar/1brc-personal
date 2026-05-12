@@ -21,9 +21,9 @@ func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
 		citiesPassed   int
 		citiesFailed   int
 	)
-	content := utils.PanicOnError(os.ReadFile("./validation.json"))
+	content := utils.PanicE(os.ReadFile("./validation.json"))
 
-	utils.PanicOnError(struct{}{}, json.Unmarshal(content, &validation))
+	utils.PanicE(struct{}{}, json.Unmarshal(content, &validation))
 
 	for city, temps := range validation { // NOTE: don't think this is right?
 		parsedMin, parsedAvg, parsedMax := convertTemperatures(temps.(string))
@@ -55,9 +55,9 @@ func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
 
 func convertTemperatures(temps string) (float64, float64, float64) {
 	values := strings.Split(temps, "/")
-	minActual := utils.PanicOnError(strconv.ParseFloat(values[0], 32))
-	avgActual := utils.PanicOnError(strconv.ParseFloat(values[1], 32))
-	maxActual := utils.PanicOnError(strconv.ParseFloat(values[2], 32))
+	minActual := utils.PanicE(strconv.ParseFloat(values[0], 32))
+	avgActual := utils.PanicE(strconv.ParseFloat(values[1], 32))
+	maxActual := utils.PanicE(strconv.ParseFloat(values[2], 32))
 
 	parsedMin := utils.TruncateNaive(minActual, 0.1)
 	parsedAvg := utils.TruncateNaive(avgActual, 0.1)
@@ -86,7 +86,7 @@ func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedM
 func collectErrs(errs []error) string {
 	result := strings.Builder{}
 	for _, err := range errs {
-		utils.PanicOnError(result.WriteString(err.Error() + "\n"))
+		utils.PanicE(result.WriteString(err.Error() + "\n"))
 	}
 	return result.String()
 }
