@@ -2,6 +2,9 @@ package model
 
 type City string
 
+type Compute interface {
+	Compute()
+}
 type Validation struct {
 	City string
 	Min  float64

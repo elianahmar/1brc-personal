@@ -54,3 +54,14 @@ func runCalculations() {
 	fmt.Println("Finished validating the answers")
 	utils.PanicE(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }
+
+func selectImplementation(impl string) model.Compute {
+	switch impl {
+	case "p1":
+	case "p2":
+	case "p3":
+	case "p4":
+	case "p5":
+
+	}
+}
