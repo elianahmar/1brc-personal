@@ -65,7 +65,15 @@ Showing top 10 nodes out of 64
 - Reading file concurrently takes 10-15 seconds which is really good. However, consuming the lines is taking too long. My idea there is to simply create more consumers
 - I have some ideas to optimize 
 
-### 7th8Day 5/11/26
+### 7th Day 5/11/26
 - The more concurrency I add the slower my program gets. I'm getting kinda stuck here
 - I implemented a single threaded version with absolutely no concurrency and it was the fastest implementation... This is kinda unintuitive for me...
 - Single threaded approach finished in 117 seconds
+- I continued building off the single threaded approach
+- Had a huge breakthrough using unsafe. I used unsafe to perform map lookups. That brought runtime from 117-> 57s
+- Did some benchmarking on bufio.Scanner vs. Reader. Seems that Scanner is better
+- More optimizations 
+  - increase buffer size brought me to 55 seconds
+  - removed panic checks brought me from 55 -> 53s
+  - used built in min/max and that brought me down to 51.4 seconds
+
