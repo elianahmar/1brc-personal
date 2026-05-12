@@ -79,7 +79,7 @@ func selectImplementation(impl, path string, chansize *int) model.Compute {
 	case "p4":
 		return pre.NewP4(path, *chansize)
 	case "p5":
-		panic("not implemented")
+		return pre.NewP5(path, *chansize)
 	}
 	return nil
 }

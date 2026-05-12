@@ -2,10 +2,16 @@ package preprocessor
 
 import (
 	"bufio"
+	"bytes"
 	"io"
+	"math"
 	"os"
+	"strconv"
+	"sync"
 	"testing"
 
+	"github.com/throwea/1brc-go/pkg/model"
+	m "github.com/throwea/1brc-go/pkg/model"
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
@@ -94,6 +100,87 @@ func BenchmarkCyclicBuffer(b *testing.B) { // 1.465s (10*6 lines)
 					break
 				}
 			}
+		}
+	}
+}
+
+func BenchmarkFileScanning(b *testing.B) { // 1.481s (Small Data) 15.690s full dataset
+	for b.Loop() {
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		defer file.Close()
+		fileScanner := bufio.NewScanner(file)
+		for fileScanner.Scan() {
+			fileScanner.Bytes()
+			// process the line itself
+		}
+	}
+}
+
+// 1.492s (Small data) 12.582s (Full Dataset) 100000 bytes
+// 6.899s (Full Dataset) 4096 * (32) ~= 128 bytes
+func BenchmarkFileChunking(b *testing.B) {
+	for b.Loop() {
+		wg := &sync.WaitGroup{}
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		defer file.Close()
+
+		fileStats := utils.PanicE(file.Stat())
+		fileSizeBytes := fileStats.Size()
+		chunkSize := 4096 * 32 // ~128 mb?
+
+		goRoutines := fileSizeBytes / int64(chunkSize)
+
+		hasLeftover := fileSizeBytes%int64(chunkSize) > 0
+		if hasLeftover {
+			goRoutines += 1
+		}
+		chunks := make([]m.Chunk, goRoutines)
+		for i := 0; i < int(goRoutines); i++ {
+			chunks[i].BufSize = chunkSize
+			chunks[i].Offset = i * chunkSize
+			chunks[i].Idx = i
+		}
+		readChunks := make([]*m.ReadChunk, goRoutines)
+
+		wg.Add(int(goRoutines))
+		// spawn go routines for reading each chunk
+		for i := 0; i < int(goRoutines); i++ {
+			go func(i int) {
+				defer wg.Done()
+				chunk := &chunks[i]
+				buffer := make([]byte, chunk.BufSize)
+				file.ReadAt(buffer, int64(chunk.Offset))
+				readChunks[i] = &m.ReadChunk{Idx: i, Buffer: buffer, Offset: chunk.Offset}
+			}(i)
+		}
+		wg.Wait()
+
+	}
+}
+
+func BenchmarkUnsafe(b *testing.B) {
+	for b.Loop() {
+		// 117 seconds. Fastest yet. All single threaded????
+		// Brute force this. Read line by line and update a table
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		defer file.Close()
+		fileScanner := bufio.NewScanner(file)
+		delim := []byte{';'}
+		measurements := make(map[string]*model.Measurement, 512) // 512 bc it's power of 2
+		for fileScanner.Scan() {
+			line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
+			// process the line itself
+			city, num, found := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
+			cityName := utils.BytesToString(city)
+			utils.PanicIf(!found, "bytes not found?")
+			temp := utils.PanicE(strconv.ParseFloat(string(num), 64))
+			if _, exists := measurements[cityName]; !exists {
+				measurements[cityName] = &model.Measurement{City: cityName}
+			}
+			measurements[cityName].Temps += temp
+			measurements[cityName].Count += 1
+			measurements[cityName].Max = math.Max(measurements[cityName].Max, temp)
+			measurements[cityName].Min = math.Min(measurements[cityName].Min, temp)
 		}
 	}
 }
