@@ -3,7 +3,7 @@ package model
 type City string
 
 type Compute interface {
-	Compute()
+	Compute() map[City]*Measurement
 }
 type Validation struct {
 	City string
