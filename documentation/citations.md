@@ -1,2 +1,3 @@
 - https://github.com/kgrz/reading-files-in-go/blob/master/reading-chunkwise-multiple.go
 - https://warrenu.github.io/posts/2025/09/goroutines-channels-patterns/
+- https://medium.com/swlh/processing-16gb-file-in-seconds-go-lang-3982c235dfa2

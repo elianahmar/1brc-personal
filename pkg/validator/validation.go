@@ -12,7 +12,7 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
+func ValidateCorrectness(measurements map[string]*model.Measurement) {
 	var (
 		validation     map[string]interface{}
 		totalMinMisses int
@@ -28,7 +28,7 @@ func ValidateCorrectness(measurements map[model.City]*model.Measurement) {
 	for city, temps := range validation { // NOTE: don't think this is right?
 		parsedMin, parsedAvg, parsedMax := convertTemperatures(temps.(string))
 
-		predicted, exists := measurements[model.City(city)]
+		predicted, exists := measurements[string(city)]
 		if !exists {
 			continue
 		}

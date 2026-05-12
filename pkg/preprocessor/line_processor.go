@@ -11,7 +11,7 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-func processLineByte(line m.Line) (model.City, float64, error) {
+func processLineByte(line m.Line) (string, float64, error) {
 	semicolon := []byte{';'}
 	split := bytes.Split(line.Line, semicolon)
 	if len(split) != 2 {
@@ -22,10 +22,10 @@ func processLineByte(line m.Line) (model.City, float64, error) {
 	// fmt.Println(fmt.Sprintf("Line: %s, line idx: %d, chunk idx: %d", string(line.Line), line.LineIdx, line.ChunkIdx))
 	dig := utils.PanicE(strconv.ParseFloat(string(split[1]), 32))
 	temp := utils.TruncateNaive(dig, 0.1) // No good. We don't need this much precision
-	return model.City(split[0]), temp, nil
+	return string(split[0]), temp, nil
 }
 
-func UpdateMeasurement(measurements map[model.City]*model.Measurement, city model.City, temp float64) {
+func UpdateMeasurement(measurements map[string]*model.Measurement, city string, temp float64) {
 	if _, exists := measurements[city]; !exists {
 		measurements[city] = &model.Measurement{City: city}
 	}

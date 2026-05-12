@@ -51,7 +51,7 @@ func runCalculations() {
 	// measurements := p3.ReadFileConcurrent()
 
 	var chansize *int
-	if len(os.Args) >= 3 {
+	if len(os.Args) > 3 {
 		num := utils.PanicE(strconv.Atoi(os.Args[3]))
 		chansize = &num
 	} else {
@@ -70,14 +70,14 @@ func runCalculations() {
 
 func selectImplementation(impl, path string, chansize *int) model.Compute {
 	switch impl {
-	case "p1":
-		return pre.NewP1(path, *chansize)
+	// case "p1":
+	// 	return pre.NewP1(path, *chansize)
 	case "p2":
-		return pre.NewP3(path)
-	case "p3":
 		panic("not implemented")
+	// case "p3":
+	// 	return pre.NewP3(path)
 	case "p4":
-		panic("not implemented")
+		return pre.NewP4(path, *chansize)
 	case "p5":
 		panic("not implemented")
 	}
