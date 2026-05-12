@@ -27,15 +27,11 @@ func NewP1(path string, chansize int) *P1 {
 // THOUGHTS: To read concurrently, I will need to read each byte individually. However, that will pose another problem
 // If I chunk based on bytes, then there is a possibility of some lines being cut off. I would have to resolve those lines
 // Let me think about this. I read the entire line by line and create an object for each line. What if read in parallel, rejoin the entire
-// TODO: Come back to this. Let's first use a pool of strings.
 
-// TODO: this is where a majority of the optimizations will need to be made
-// For context: we only process 413 cities in total. A majority of the time is gonna be from just
-// reading the file
-func (p1 *P1) ReadFile(path string, chanSize int) map[model.City]*model.Measurement {
-	dataChan := make(chan string, chanSize)
+func (p1 *P1) Compute() map[model.City]*model.Measurement {
+	dataChan := make(chan string, p1.ChanSize)
 	wg := &sync.WaitGroup{}
-	file := utils.PanicE(os.Open(path))
+	file := utils.PanicE(os.Open(p1.Path))
 	defer file.Close()
 
 	fileScanner := bufio.NewScanner(file)
@@ -50,8 +46,8 @@ func (p1 *P1) ReadFile(path string, chanSize int) map[model.City]*model.Measurem
 
 	wg.Add(2)
 	// Producer consumer pattern. Consumers will stop receiving once the channel is closed
-	go p1.pushLines(fileScanner, dataChan, chanSize, wg)
-	go p1.collectData(dataChan, measurementChan, chanSize, wg)
+	go p1.pushLines(fileScanner, dataChan, p1.ChanSize, wg)
+	go p1.collectData(dataChan, measurementChan, p1.ChanSize, wg)
 	wg.Wait()
 
 	return <-measurementChan
