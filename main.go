@@ -51,7 +51,7 @@ func runCalculations() {
 	// measurements := p3.ReadFileConcurrent()
 
 	var chansize *int
-	if len(os.Args) >= 3 {
+	if len(os.Args) > 3 {
 		num := utils.PanicE(strconv.Atoi(os.Args[3]))
 		chansize = &num
 	} else {

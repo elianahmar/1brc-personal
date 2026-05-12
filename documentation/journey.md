@@ -64,3 +64,6 @@ Showing top 10 nodes out of 64
 - Ran on the full data and I'm seeing it take **793 seconds (13 minutes)**
 - Reading file concurrently takes 10-15 seconds which is really good. However, consuming the lines is taking too long. My idea there is to simply create more consumers
 - I have some ideas to optimize 
+
+### 7th Day 5/11/26
+- The more concurrency I add the slower my program gets. I'm getting kinda stuck here
