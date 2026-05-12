@@ -3,6 +3,7 @@
   - Benchmark the file reading
   - Decompose the different parts down in the benchmark so I can compare performance
 - Convert floating point to ints and do conversion once at the end
+- Benchmark bufio.Reader versus scanner (using ReadSlice('\n'))
 - Fix the under by .1 issue. Thinking it's an issue with truncating
 - Aim for under 15 seconds
 
