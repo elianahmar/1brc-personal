@@ -1,5 +1,7 @@
 package preprocessor
 
+type P2 struct{}
+
 // import (
 // 	"os"
 // 	"sync"
