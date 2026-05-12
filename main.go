@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/throwea/1brc-go/pkg/compute"
+	"github.com/throwea/1brc-go/pkg/files"
 	pre "github.com/throwea/1brc-go/pkg/preprocessor"
 	"github.com/throwea/1brc-go/pkg/utils"
 	"github.com/throwea/1brc-go/pkg/validator"
@@ -30,17 +31,18 @@ func main() {
 
 func runCalculations() {
 	dayMonthYear := utils.DayMonthYear()
-	cpuFile := fmt.Sprintf("%s-cpu.prof", dayMonthYear)
-	memFile := fmt.Sprintf("%s-mem.prof", dayMonthYear)
+	files.CreateDir(dayMonthYear)
+	cpuFile := fmt.Sprintf("./documentation/%s/%s-cpu.prof", dayMonthYear, dayMonthYear)
+	memFile := fmt.Sprintf("./documentation/%s/%s-mem.prof", dayMonthYear, dayMonthYear)
 
-	cpuProfile := utils.PanicOnError(os.Create(cpuFile))
-	memProfile := utils.PanicOnError(os.Create(memFile))
+	cpuProfile := utils.PanicE(os.Create(cpuFile))
+	memProfile := utils.PanicE(os.Create(memFile))
 	defer func(cpuProfile *os.File, memProfile *os.File) {
 		cpuProfile.Close()
 		memProfile.Close()
 	}(cpuProfile, memProfile)
 
-	utils.PanicOnError(struct{}{}, pprof.StartCPUProfile(cpuProfile))
+	utils.PanicE(struct{}{}, pprof.StartCPUProfile(cpuProfile))
 	defer pprof.StopCPUProfile()
 
 	measurements := pre.ReadFileConcurrent2("../1brc-go/small_measurements.txt")
@@ -49,5 +51,5 @@ func runCalculations() {
 	fmt.Println("Computed the averages. Time to validate")
 	validator.ValidateCorrectness(measurements)
 	fmt.Println("Finished validating the answers")
-	utils.PanicOnError(struct{}{}, pprof.WriteHeapProfile(memProfile))
+	utils.PanicE(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }
