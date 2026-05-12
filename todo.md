@@ -9,15 +9,15 @@
   - This will require me to add synchronization around the map. For now, just use a mutex
 - At the last line, add total number of misses, min misses, avg misses, max misses
 - multiple concurrent consumer pattern. Not really helping. I think I need to see the dumps
+- Write files to directories based on day. Put under documentation folder
 //=====
-- Write files to directories based on day
-- Benchmark all of the parts of my program. Put under documentation folder
+
+- add .gitignore
+- Benchmark all of the parts of my program. 
   - Benchmark the file reading
   - Decompose the different parts down in the benchmark so I can compare performance
 - Fix the under by .1 issue. Thinking it's an issue with truncating
 - Aim for under 15 seconds
-
-
 
 ### Constraints
 - Can only use std library packages
