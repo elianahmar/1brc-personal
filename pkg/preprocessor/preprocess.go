@@ -61,7 +61,7 @@ func collectData(data chan string, measurementChan chan map[model.City]*model.Me
 		measurements[city].Max = math.Max(measurements[city].Max, temp)
 		measurements[city].Min = math.Min(measurements[city].Min, temp)
 	}
-	utils.PanicOnCondition(linesProcessed != linesToProcess, "didn't process all lines")
+	utils.PanicIf(linesProcessed != linesToProcess, "didn't process all lines")
 
 	measurementChan <- measurements
 	close(measurementChan)
