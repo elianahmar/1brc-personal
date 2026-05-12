@@ -19,17 +19,16 @@ type P3 struct {
 	ChanSize int
 }
 
-func NewP3(path string, chansize int) *P3 {
+func NewP3(path string) *P3 {
 	return &P3{
-		Path:     path,
-		ChanSize: chansize,
+		Path: path,
 	}
 }
 
-func (p3 *P3) ReadFileConcurrent(path string) map[model.City]*model.Measurement {
+func (p3 *P3) ReadFileConcurrent() map[model.City]*model.Measurement {
 	wg := &sync.WaitGroup{}
 	readFileStart := time.Now()
-	file := utils.PanicE(os.Open(path))
+	file := utils.PanicE(os.Open(p3.Path))
 	defer file.Close()
 
 	fileStats := utils.PanicE(file.Stat())

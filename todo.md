@@ -10,9 +10,11 @@
 - At the last line, add total number of misses, min misses, avg misses, max misses
 - multiple concurrent consumer pattern. Not really helping. I think I need to see the dumps
 - Write files to directories based on day. Put under documentation folder
+- add .gitignore
+
 //=====
 
-- add .gitignore
+- Objectify everything so that swapping out different implementations become easier
 - Benchmark all of the parts of my program. 
   - Benchmark the file reading
   - Decompose the different parts down in the benchmark so I can compare performance
