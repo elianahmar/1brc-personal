@@ -23,7 +23,7 @@ func NewP6(path string, chansize int) *P6 {
 	}
 }
 
-func (p6 *P6) Compute() map[string]*model.Measurement { // 55 seconds. Minimal difference using unsafe for temperature
+func (p6 *P6) Compute() map[string]*model.Measurement { // 53 seconds. Minimal difference using unsafe for temperature
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p6.Path))
 	defer file.Close()
@@ -34,12 +34,13 @@ func (p6 *P6) Compute() map[string]*model.Measurement { // 55 seconds. Minimal d
 	for fileScanner.Scan() {
 		line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
 		// process the line itself
-		city, num, found := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
-		cityLookup := utils.BytesToString(city)
-		numUnsafe := utils.BytesToString(num)
-		utils.PanicIf(!found, "bytes not found?")
-		temp := utils.PanicE(strconv.ParseFloat(numUnsafe, 64))
-		measurement, exists := measurements[cityLookup] // Lookup trick. city underlying byte array can change but we can use it for lookup
+		city, num, _ := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
+		// cityLookup := utils.BytesToString(city)
+		// numUnsafe :=
+		// utils.PanicIf(!found, "bytes not found?")
+		// temp := utils.PanicE(strconv.ParseFloat(utils.BytesToString(num), 64))
+		temp, _ := strconv.ParseFloat(utils.BytesToString(num), 64)
+		measurement, exists := measurements[utils.BytesToString(city)] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			cityName := string(city)
 			measurement = &model.Measurement{City: cityName}

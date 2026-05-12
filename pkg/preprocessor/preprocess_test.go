@@ -267,7 +267,7 @@ func BenchmarkFileScanning_1mbBuffer(b *testing.B) { // 1.481s (Small Data) 15.6
 	for b.Loop() {
 		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
 		defer file.Close()
-		mb := 2
+		mb := 1
 		bufSize := mb * 1024 * 1024
 		fileScanner := bufio.NewScanner(file)
 		fileScanner.Buffer(make([]byte, bufSize), 1024)
