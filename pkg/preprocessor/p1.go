@@ -29,7 +29,7 @@ func NewP1(path string, chansize int) *P1 {
 // If I chunk based on bytes, then there is a possibility of some lines being cut off. I would have to resolve those lines
 // Let me think about this. I read the entire line by line and create an object for each line. What if read in parallel, rejoin the entire
 
-func (p1 *P1) Compute() map[model.City]*model.Measurement {
+func (p1 *P1) Compute() map[model.City]*model.Measurement { // 509 seconds (over 8 minutes)
 	dataChan := make(chan string, p1.ChanSize)
 	wg := &sync.WaitGroup{}
 	file := utils.PanicE(os.Open(p1.Path))
