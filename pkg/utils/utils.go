@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"time"
+	"unsafe"
 )
 
 func TruncateNaive(f float64, unit float64) float64 {
@@ -37,4 +38,12 @@ func First[T any](items []T, fn func(T) bool) int {
 func DayMonthYear() string {
 	timestamp := time.Now()
 	return fmt.Sprintf("%d-%s-%d", timestamp.Day(), timestamp.Month().String(), timestamp.Year())
+}
+
+// NOTE: Source : https://dev.to/devflex-pro/how-to-use-unsafe-in-go-without-killing-your-service-699
+// With unsafe, I'm taking creating a string header that points to the byte array. This should only be used
+// in cases where the underlying byte array isn't being mutated. The upside to this is that there is zero-allocation
+// Because casting b to string creates a copy of the byte array O(n). With unsafe pointers this becomes O(1)
+func BytesToString(b []byte) string {
+	return unsafe.String(&b[0], len(b))
 }
