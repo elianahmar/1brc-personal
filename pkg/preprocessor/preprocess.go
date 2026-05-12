@@ -2,6 +2,7 @@ package preprocessor
 
 import (
 	"bufio"
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -69,7 +70,7 @@ func (p1 *P1) collectData(data chan string, measurementChan chan map[model.City]
 		measurements[city].Max = math.Max(measurements[city].Max, temp)
 		measurements[city].Min = math.Min(measurements[city].Min, temp)
 	}
-	utils.PanicIf(linesProcessed != linesToProcess, "didn't process all lines")
+	utils.PanicIf(linesProcessed != linesToProcess, fmt.Sprintf("didn't process all lines %d/%d", linesProcessed, linesToProcess))
 
 	measurementChan <- measurements
 	close(measurementChan)

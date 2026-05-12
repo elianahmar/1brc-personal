@@ -51,11 +51,12 @@ func runCalculations() {
 	// measurements := p3.ReadFileConcurrent()
 
 	var chansize *int
-	if len(os.Args) >= 4 {
-		num := utils.PanicE(strconv.Atoi(os.Args[4]))
-		*chansize = num
+	if len(os.Args) >= 3 {
+		num := utils.PanicE(strconv.Atoi(os.Args[3]))
+		chansize = &num
 	} else {
-		*chansize = 1000000000
+		defChanSize := 1000000000
+		chansize = &defChanSize
 	}
 	processor := selectImplementation(os.Args[1], os.Args[2], chansize)
 	fmt.Println("Read the file and processed the lines")
@@ -70,7 +71,6 @@ func runCalculations() {
 func selectImplementation(impl, path string, chansize *int) model.Compute {
 	switch impl {
 	case "p1":
-		// TODO: add default
 		return pre.NewP1(path, *chansize)
 	case "p2":
 		return pre.NewP3(path)
