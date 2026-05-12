@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 	"time"
 
 	"github.com/throwea/1brc-go/pkg/compute"
@@ -48,9 +49,18 @@ func runCalculations() {
 
 	// p3 := pre.NewP3("../1brc-go/small_measurements.txt")
 	// measurements := p3.ReadFileConcurrent()
-	processor := selectImplementation(impl, path, chansize)
+
+	var chansize *int
+	if len(os.Args) >= 3 {
+		num := utils.PanicE(strconv.Atoi(os.Args[3]))
+		chansize = &num
+	} else {
+		defChanSize := 1000000000
+		chansize = &defChanSize
+	}
+	processor := selectImplementation(os.Args[1], os.Args[2], chansize)
 	fmt.Println("Read the file and processed the lines")
-	processor.Compute()
+	measurements := processor.Compute()
 	compute.ComputeAvg(measurements)
 	fmt.Println("Computed the averages. Time to validate")
 	validator.ValidateCorrectness(measurements)
@@ -61,7 +71,6 @@ func runCalculations() {
 func selectImplementation(impl, path string, chansize *int) model.Compute {
 	switch impl {
 	case "p1":
-		// TODO: add default
 		return pre.NewP1(path, *chansize)
 	case "p2":
 		return pre.NewP3(path)
