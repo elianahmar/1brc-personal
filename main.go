@@ -71,35 +71,27 @@ func runImplementation(impl, path string, chansize *int) {
 		p4 := pre.NewP4(path, *chansize)
 		measurements := p4.Compute()
 		compute.ComputeAvg(measurements)
-		fmt.Println("Computed the averages. Time to validate")
 		validator.ValidateCorrectness(measurements)
-		fmt.Println("Finished validating the answers")
 	case "p5":
 		fmt.Println("Read the file and processed the lines")
 		p5 := pre.NewP5(path, *chansize)
 		measurements := p5.Compute()
 		compute.ComputeAvg(measurements)
-		fmt.Println("Computed the averages. Time to validate")
 		validator.ValidateCorrectness(measurements)
-		fmt.Println("Finished validating the answers")
 
 	case "p6":
 		fmt.Println("Read the file and processed the lines")
 		p6 := pre.NewP6(path, *chansize)
 		measurements := p6.Compute()
 		compute.ComputeAvg(measurements)
-		fmt.Println("Computed the averages. Time to validate")
 		validator.ValidateCorrectness(measurements)
-		fmt.Println("Finished validating the answers")
 
 	case "p7":
 		fmt.Println("Read the file and processed the lines")
 		p7 := pre.NewP7(path)
 		measurements := p7.Compute()
 		compute.ComputeAvg(measurements)
-		fmt.Println("Computed the averages. Time to validate")
 		validator.ValidateCorrectness(measurements)
-		fmt.Println("Finished validating the answers")
 	case "p8":
 		fmt.Println("Read the file and processed the lines")
 		p8 := pre.NewP8(path)
@@ -107,6 +99,5 @@ func runImplementation(impl, path string, chansize *int) {
 		compute.ComputeAvgInt(measurements)
 		fmt.Println("Computed the averages. Time to validate")
 		validator.ValidateCorrectnessInt(measurements)
-		fmt.Println("Finished validating the answers")
 	}
 }
