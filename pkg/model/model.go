@@ -20,6 +20,13 @@ type MeasurementInt struct {
 	Avg      float64
 }
 
+type Result struct {
+	City string
+	Min  float64
+	Max  float64
+	Avg  float64
+}
+
 type Measurement struct {
 	City     string
 	Temps    float64
