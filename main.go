@@ -83,7 +83,7 @@ func selectImplementation(impl, path string, chansize *int) model.Compute {
 	case "p6":
 		return pre.NewP6(path, *chansize)
 	case "p7":
-		return pre.NewP7(path, *chansize)
+		return pre.NewP7(path)
 	}
 	return nil
 }

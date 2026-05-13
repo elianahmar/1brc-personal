@@ -16,10 +16,9 @@ type P7 struct {
 	ChanSize int
 }
 
-func NewP7(path string, chansize int) *P7 {
+func NewP7(path string) *P7 {
 	return &P7{
-		Path:     path,
-		ChanSize: chansize,
+		Path: path,
 	}
 }
 

@@ -11,12 +11,13 @@ type Validation struct {
 }
 
 type Measurement struct {
-	City  string
-	Temps float64
-	Count float64
-	Min   float64
-	Max   float64
-	Avg   float64
+	City     string
+	Temps    float64
+	TempsInt int
+	Count    float64
+	Min      float64
+	Max      float64
+	Avg      float64
 }
 
 type ReadChunk struct {
