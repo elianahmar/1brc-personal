@@ -17,7 +17,7 @@ type MeasurementInt struct {
 	Count    int
 	Min      int
 	Max      int
-	Avg      int
+	Avg      float64
 }
 
 type Measurement struct {

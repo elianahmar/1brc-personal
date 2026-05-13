@@ -18,7 +18,7 @@ func ComputeAvg(measurements map[string]*model.Measurement) {
 
 func ComputeAvgInt(measurements map[string]*model.MeasurementInt) {
 	for _, measurement := range measurements {
-		avg := float64(measurement.Temps) / float64(measurement.Count)
+		avg := math.Round(float64(measurement.Temps) / float64(measurement.Count))
 		avg /= 10
 		measurement.Avg = utils.TruncateNaive(math.Round(avg), 0.1)
 	}
