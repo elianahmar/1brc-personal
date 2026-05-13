@@ -22,7 +22,7 @@ func NewP7(path string) *P7 {
 	}
 }
 
-func (p7 *P7) Compute() map[string]*model.Measurement { // 53 seconds. Minimal difference using unsafe for temperature
+func (p7 *P7) Compute() map[string]*model.Measurement { // 51 seconds. Minimal difference using unsafe for temperature
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p7.Path))
 	defer file.Close()
