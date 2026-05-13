@@ -24,6 +24,7 @@ func NewP8(path string) *P8 {
 }
 
 func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 51 seconds. Minimal difference using unsafe for temperature
+	// Inlining this function to keep everything on the stack
 	parse := func(num []byte) (int, error) {
 		numByte := make([]byte, 0, 8) // If this ends up being faster, think about buffering this or clearing after use?
 		for i := range num {
@@ -33,6 +34,7 @@ func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 51 seconds. Minima
 			}
 			numByte = append(numByte, nb)
 		}
+		// Remove this after validating correctness
 		utils.PanicIf(len(numByte) > 8, fmt.Sprintf("numByte array should never exceed 8 bytes. Length = %d", len(numByte)))
 		return strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
 	}

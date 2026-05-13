@@ -10,7 +10,6 @@ import (
 
 	"github.com/throwea/1brc-go/pkg/compute"
 	"github.com/throwea/1brc-go/pkg/files"
-	"github.com/throwea/1brc-go/pkg/model"
 	pre "github.com/throwea/1brc-go/pkg/preprocessor"
 	"github.com/throwea/1brc-go/pkg/utils"
 	"github.com/throwea/1brc-go/pkg/validator"
@@ -47,9 +46,6 @@ func runCalculations() {
 	utils.PanicE(struct{}{}, pprof.StartCPUProfile(cpuProfile))
 	defer pprof.StopCPUProfile()
 
-	// p3 := pre.NewP3("../1brc-go/small_measurements.txt")
-	// measurements := p3.ReadFileConcurrent()
-
 	var chansize *int
 	if len(os.Args) > 3 {
 		num := utils.PanicE(strconv.Atoi(os.Args[3]))
@@ -58,17 +54,11 @@ func runCalculations() {
 		defChanSize := 1000000000
 		chansize = &defChanSize
 	}
-	processor := selectImplementation(os.Args[1], os.Args[2], chansize)
-	fmt.Println("Read the file and processed the lines")
-	measurements := processor.Compute()
-	compute.ComputeAvg(measurements)
-	fmt.Println("Computed the averages. Time to validate")
-	validator.ValidateCorrectness(measurements)
-	fmt.Println("Finished validating the answers")
+	runImplementation(os.Args[1], os.Args[2], chansize)
 	utils.PanicE(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }
 
-func selectImplementation(impl, path string, chansize *int) model.Compute {
+func runImplementation(impl, path string, chansize *int) {
 	switch impl {
 	// case "p1":
 	// 	return pre.NewP1(path, *chansize)
@@ -77,13 +67,46 @@ func selectImplementation(impl, path string, chansize *int) model.Compute {
 	// case "p3":
 	// 	return pre.NewP3(path)
 	case "p4":
-		return pre.NewP4(path, *chansize)
+		fmt.Println("Read the file and processed the lines")
+		p4 := pre.NewP4(path, *chansize)
+		measurements := p4.Compute()
+		compute.ComputeAvg(measurements)
+		fmt.Println("Computed the averages. Time to validate")
+		validator.ValidateCorrectness(measurements)
+		fmt.Println("Finished validating the answers")
 	case "p5":
-		return pre.NewP5(path, *chansize)
+		fmt.Println("Read the file and processed the lines")
+		p5 := pre.NewP5(path, *chansize)
+		measurements := p5.Compute()
+		compute.ComputeAvg(measurements)
+		fmt.Println("Computed the averages. Time to validate")
+		validator.ValidateCorrectness(measurements)
+		fmt.Println("Finished validating the answers")
+
 	case "p6":
-		return pre.NewP6(path, *chansize)
+		fmt.Println("Read the file and processed the lines")
+		p6 := pre.NewP6(path, *chansize)
+		measurements := p6.Compute()
+		compute.ComputeAvg(measurements)
+		fmt.Println("Computed the averages. Time to validate")
+		validator.ValidateCorrectness(measurements)
+		fmt.Println("Finished validating the answers")
+
 	case "p7":
-		return pre.NewP7(path)
+		fmt.Println("Read the file and processed the lines")
+		p7 := pre.NewP7(path)
+		measurements := p7.Compute()
+		compute.ComputeAvg(measurements)
+		fmt.Println("Computed the averages. Time to validate")
+		validator.ValidateCorrectness(measurements)
+		fmt.Println("Finished validating the answers")
+	case "p8":
+		fmt.Println("Read the file and processed the lines")
+		p8 := pre.NewP8(path)
+		measurements := p8.Compute()
+		compute.ComputeAvgInt(measurements)
+		fmt.Println("Computed the averages. Time to validate")
+		validator.ValidateCorrectnessInt(measurements)
+		fmt.Println("Finished validating the answers")
 	}
-	return nil
 }
