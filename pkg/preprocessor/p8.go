@@ -3,6 +3,7 @@ package preprocessor
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"os"
 	"strconv"
 	"unsafe"
@@ -23,6 +24,18 @@ func NewP8(path string) *P8 {
 }
 
 func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 51 seconds. Minimal difference using unsafe for temperature
+	parse := func(num []byte) (int, error) {
+		numByte := make([]byte, 0, 8) // If this ends up being faster, think about buffering this or clearing after use?
+		for i := range num {
+			nb := num[i]
+			if nb == '.' {
+				continue
+			}
+			numByte = append(numByte, nb)
+		}
+		utils.PanicIf(len(numByte) > 8, fmt.Sprintf("numByte array should never exceed 8 bytes. Length = %d", len(numByte)))
+		return strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+	}
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p8.Path))
 	defer file.Close()
@@ -34,7 +47,7 @@ func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 51 seconds. Minima
 		line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
 		// process the line itself
 		city, num, _ := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
-		temp, _ := strconv.ParseFloat(unsafe.String(&num[0], len(num)), 64)
+		temp, _ := parse(num)
 		measurement, exists := measurements[unsafe.String(&city[0], len(city))] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			cityName := string(city)
