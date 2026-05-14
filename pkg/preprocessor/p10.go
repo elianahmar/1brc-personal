@@ -2,7 +2,6 @@ package preprocessor
 
 import (
 	"bufio"
-	"bytes"
 	"os"
 	"strconv"
 	"unsafe"
@@ -11,44 +10,60 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-type P9 struct {
+type P10 struct {
 	Path     string
 	ChanSize int
 }
 
-func NewP9(path string) *P9 {
-	return &P9{
+func NewP10(path string) *P10 {
+	return &P10{
 		Path: path,
 	}
 }
 
-func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 108 seconds. New Record
+func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 108 seconds. New Record
 	// Inlining this function to keep everything on the stack
 	numByte := make([]byte, 0, 8)
-	parse := func(num []byte) (int, error) {
-		numByte = numByte[:0] // clear the array
-		for i := range num {
-			nb := num[i]
-			if nb == '.' {
-				continue
+	cityByte := make([]byte, 0, 32)
+	delim, newline, period := byte(';'), byte('\n'), byte('.')
+	parse := func(num []byte) (int, string) {
+		numByte = numByte[:0]   // clear the array
+		cityByte = cityByte[:0] // clear the array
+		L := 0
+		for {
+			nb := num[L]
+			if nb == delim {
+				L += 1
+				break
 			}
 			numByte = append(numByte, nb)
 		}
-		return strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+
+		for {
+			nb := num[L]
+			if nb == period {
+				L += 1
+				continue
+			} else if nb == newline {
+				break
+			} else {
+				cityByte = append(cityByte, nb)
+			}
+		}
+		temp, _ := strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+		return temp, unsafe.String(&cityByte[0], len(cityByte))
 	}
 	// Brute force this. Read line by line and update a table
-	file := utils.PanicE(os.Open(p9.Path))
+	file := utils.PanicE(os.Open(p10.Path))
 	defer file.Close()
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
-	delim := []byte{';'}
 	measurements := make(map[string]*model.MeasurementInt, 512) // 512 bc it's power of 2
 	for fileScanner.Scan() {
 		line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
 		// process the line itself
-		city, num, _ := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
-		temp, _ := parse(num)
-		measurement, exists := measurements[unsafe.String(&city[0], len(city))] // Lookup trick. city underlying byte array can change but we can use it for lookup
+		temp, city := parse(line)
+		measurement, exists := measurements[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			cityName := string(city)
 			measurement = &model.MeasurementInt{City: cityName}

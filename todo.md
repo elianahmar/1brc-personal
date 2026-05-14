@@ -6,6 +6,7 @@
 - Have final validation being written as a json object. So I can jq over it
 - Fix the under by .1 issue. Thinking it's an issue with truncating
 - Aim for under 15 seconds
+- Add unit tests for the simple parser. I don't think it's working quite right
 
 ### Constraints
 - Can only use std library packages
