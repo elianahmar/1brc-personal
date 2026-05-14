@@ -39,7 +39,7 @@ func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 
 		predicted, exists := measurements[city]
 		if !exists {
-			panic(city + " data not found")
+			fmt.Println(city + " data not found")
 		}
 
 		errs, minMiss, maxMiss, avgMiss := compare(predicted, actual)

@@ -53,9 +53,9 @@ func convertToStr(num int) string {
 	N := len(numStr)
 
 	utils.PanicIf(N > 5, "") // Temp should never exceed 5 bytes (ex. -45.4)
-	for i := 0; i < N+1; i++ {
-		if i == N {
-			continue
+	for i := range N {
+		if i == N-1 {
+			res.WriteByte('.')
 		}
 		res.WriteByte(numStr[i])
 	}

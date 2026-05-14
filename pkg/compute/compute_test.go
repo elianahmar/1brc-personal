@@ -1,6 +1,9 @@
 package compute
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestConvertToStr(t *testing.T) {
 	testCases := []struct {
@@ -11,7 +14,7 @@ func TestConvertToStr(t *testing.T) {
 		{
 			desc:     "expecting 1.0",
 			value:    10,
-			expected: "-1.0",
+			expected: "1.0",
 		},
 		{
 			desc:     "expecting -13.5",
@@ -32,7 +35,7 @@ func TestConvertToStr(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			finalVal := convertToStr(tC.value)
-			if finalVal == tC.expected {
+			if !strings.EqualFold(finalVal, tC.expected) {
 				t.Errorf("expected = %s, actual = %s", tC.expected, finalVal)
 			}
 		})
