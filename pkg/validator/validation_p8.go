@@ -33,16 +33,18 @@ func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 	content := utils.PanicE(os.ReadFile("./validation.json"))
 
 	utils.PanicE(struct{}{}, json.Unmarshal(content, &validation))
+	errs := make([]error, 0)
 
 	for city, temps := range validation { // NOTE: don't think this is right?
 		actual := getActual(temps.(string), city)
 
 		predicted, exists := measurements[city]
 		if !exists {
-			fmt.Println(city + " data not found")
+			errs = append(errs, fmt.Errorf("%s data not found", city))
+			continue
 		}
 
-		errs, minMiss, maxMiss, avgMiss := compare(predicted, actual)
+		minMiss, maxMiss, avgMiss := compare(predicted, actual, errs)
 		totalMinMisses += minMiss
 		totalMaxMisses += maxMiss
 		totalAvgMisses += avgMiss
@@ -53,17 +55,17 @@ func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 			continue
 		}
 		citiesFailed += 1
-		fmt.Println(Errors(errs))
 	}
 
 	totalMisses := totalMinMisses + totalMaxMisses + totalAvgMisses
 
 	fmt.Println("Finished validating the answers")
+	fmt.Println(Errors(errs))
 	fmt.Printf("Total Misses: %d, Min misses: %d, Max misses: %d, Avg misses: %d\n", totalMisses, totalMinMisses, totalMaxMisses, totalAvgMisses)
 	fmt.Printf("Cities Processed: %d, Cities Passed: %d, Cities Failed: %d\n", len(measurements), citiesPassed, citiesFailed)
 }
 
-func compare(predicted *model.Predicted, actual *model.Actual) ([]error, int, int, int) {
+func compare(predicted *model.Predicted, actual *model.Actual, errors []error) (int, int, int) {
 	errs := make([]error, 0)
 	minMiss, maxMiss, avgMiss := 0, 0, 0
 	if predicted.Min != actual.Min {
@@ -78,7 +80,7 @@ func compare(predicted *model.Predicted, actual *model.Actual) ([]error, int, in
 		avgMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Max = %s, actual = %s, city = %v", predicted.Max, actual.Max, predicted.City))
 	}
-	return errs, minMiss, maxMiss, avgMiss
+	return minMiss, maxMiss, avgMiss
 }
 
 func Errors(errs []error) string {

@@ -59,7 +59,5 @@ func convertToStr(num int) string {
 		}
 		res.WriteByte(numStr[i])
 	}
-	finalStr := res.String()
-	fmt.Printf("before: %s, after: %s\n", numStr, finalStr)
 	return res.String()
 }
