@@ -5,14 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/throwea/1brc-go/pkg/model"
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-func ValidateCorrectnessInt(measurements map[string]*model.MeasurementInt) {
+func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
+	getActual := func(temps, city string) *model.Actual {
+		split := strings.Split(temps, "/")
+		min, max, avg := 0, 1, 2
+		return &model.Actual{
+			City: city,
+			Min:  split[min],
+			Max:  split[max],
+			Avg:  split[avg],
+		}
+	}
 	var (
 		validation     map[string]interface{}
 		totalMinMisses int
@@ -26,15 +35,14 @@ func ValidateCorrectnessInt(measurements map[string]*model.MeasurementInt) {
 	utils.PanicE(struct{}{}, json.Unmarshal(content, &validation))
 
 	for city, temps := range validation { // NOTE: don't think this is right?
-		parsedMin, parsedAvg, parsedMax := convertTemperatures(temps.(string))
+		actual := getActual(temps.(string), city)
 
 		predicted, exists := measurements[city]
 		if !exists {
-			continue
+			panic(city + " data not found")
 		}
-		// utils.PanicOnCondition(!exists, fmt.Sprintf("no data for city: %s", city))
 
-		errs, minMiss, maxMiss, avgMiss := validateNumbersInt(predicted, parsedMin, parsedAvg, parsedMax)
+		errs, minMiss, maxMiss, avgMiss := compare(predicted, actual)
 		totalMinMisses += minMiss
 		totalMaxMisses += maxMiss
 		totalAvgMisses += avgMiss
@@ -45,7 +53,7 @@ func ValidateCorrectnessInt(measurements map[string]*model.MeasurementInt) {
 			continue
 		}
 		citiesFailed += 1
-		fmt.Println(collectErrs(errs))
+		fmt.Println(Errors(errs))
 	}
 
 	totalMisses := totalMinMisses + totalMaxMisses + totalAvgMisses
@@ -55,38 +63,25 @@ func ValidateCorrectnessInt(measurements map[string]*model.MeasurementInt) {
 	fmt.Printf("Cities Processed: %d, Cities Passed: %d, Cities Failed: %d\n", len(measurements), citiesPassed, citiesFailed)
 }
 
-func GetActualValue(temps string) model.Actual {
-	values := strings.Split(temps, "/")
-	minActual := utils.PanicE(strconv.ParseFloat(values[0], 32))
-	avgActual := utils.PanicE(strconv.ParseFloat(values[1], 32))
-	maxActual := utils.PanicE(strconv.ParseFloat(values[2], 32))
-
-	return model.Actual{
-		Min: utils.TruncateNaive(minActual, 0.1),
-		Avg: utils.TruncateNaive(avgActual, 0.1),
-		Max: utils.TruncateNaive(maxActual, 0.1),
-	}
-}
-
-func validateNumbersInt(predicted *model.Predicted, parsedMin, parsedAvg, parsedMax float64) ([]error, int, int, int) {
+func compare(predicted *model.Predicted, actual *model.Actual) ([]error, int, int, int) {
 	errs := make([]error, 0)
 	minMiss, maxMiss, avgMiss := 0, 0, 0
-	if predicted.Min != parsedMin {
+	if predicted.Min != actual.Min {
 		minMiss += 1
-		errs = append(errs, fmt.Errorf("predicted Min = %2f, actual = %2f, city = %v", predicted.Min, parsedMin, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Min = %s, actual = %s, city = %v", predicted.Min, actual.Min, predicted.City))
 	}
-	if predicted.Avg != parsedAvg {
+	if predicted.Avg != actual.Avg {
 		maxMiss += 1
-		errs = append(errs, fmt.Errorf("predicted Avg = %2f, actual = %2f, city = %v", predicted.Avg, parsedAvg, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Avg = %s, actual = %s, city = %v", predicted.Avg, actual.Avg, predicted.City))
 	}
-	if predicted.Max != parsedMax {
+	if predicted.Max != actual.Max {
 		avgMiss += 1
-		errs = append(errs, fmt.Errorf("predicted Max = %2f, actual = %2f, city = %v", predicted.Max, parsedMax, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Max = %s, actual = %s, city = %v", predicted.Max, actual.Max, predicted.City))
 	}
 	return errs, minMiss, maxMiss, avgMiss
 }
 
-func collectErrs(errs []error) string {
+func Errors(errs []error) string {
 	result := strings.Builder{}
 	for _, err := range errs {
 		utils.PanicE(result.WriteString(err.Error() + "\n"))

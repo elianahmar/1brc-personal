@@ -22,9 +22,9 @@ type MeasurementInt struct {
 
 type Actual struct {
 	City string
-	Min  float64
-	Max  float64
-	Avg  float64
+	Min  string
+	Max  string
+	Avg  string
 }
 
 type Predicted struct {
