@@ -16,6 +16,7 @@ func ComputeAvg(measurements map[string]*model.Measurement) {
 	fmt.Println("Computed the averages. Time to validate")
 }
 
+// NOTE: I can just convert to string then simply put a period before smallest digit. Done. Try that if computations don't work
 func ComputeAvgInt(measurements map[string]*model.MeasurementInt) map[string]*model.Predicted {
 	predictions := make(map[string]*model.Predicted)
 	for city, measurement := range measurements {
