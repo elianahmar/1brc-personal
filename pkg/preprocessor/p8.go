@@ -11,22 +11,21 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-type P9 struct {
+type P8 struct {
 	Path     string
 	ChanSize int
 }
 
-func NewP9(path string) *P9 {
-	return &P9{
+func NewP8(path string) *P8 {
+	return &P8{
 		Path: path,
 	}
 }
 
-func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 44 seconds. New Record
+func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 44 seconds. Twice as slow now
 	// Inlining this function to keep everything on the stack
-	numByte := make([]byte, 0, 8)
 	parse := func(num []byte) (int, error) {
-		numByte = numByte[:0] // clear the array
+		numByte := make([]byte, 0, 8) // If this ends up being faster, think about buffering this or clearing after use?
 		for i := range num {
 			nb := num[i]
 			if nb == '.' {
@@ -34,11 +33,11 @@ func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 44 seconds. New Re
 			}
 			numByte = append(numByte, nb)
 		}
+		// Remove this after validating correctness
 		return strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
 	}
 	// Brute force this. Read line by line and update a table
-	file := utils.PanicE(os.Open(p9.Path))
-	// defer file.Close()
+	file := utils.PanicE(os.Open(p8.Path))
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
 	delim := []byte{';'}
@@ -56,7 +55,6 @@ func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 44 seconds. New Re
 		}
 		measurement.Temps += temp
 		measurement.Count += 1
-		// PERF: Would min and max work on the strings themselves?
 		measurement.Max = max(measurement.Max, temp)
 		measurement.Min = min(measurement.Min, temp)
 	}

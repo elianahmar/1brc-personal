@@ -3,7 +3,6 @@ package preprocessor
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"os"
 	"strconv"
 	"unsafe"
@@ -12,21 +11,22 @@ import (
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-type P8 struct {
+type P9 struct {
 	Path     string
 	ChanSize int
 }
 
-func NewP8(path string) *P8 {
-	return &P8{
+func NewP9(path string) *P9 {
+	return &P9{
 		Path: path,
 	}
 }
 
-func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 108 seconds. Twice as slow now
+func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 108 seconds. New Record
 	// Inlining this function to keep everything on the stack
+	numByte := make([]byte, 0, 8)
 	parse := func(num []byte) (int, error) {
-		numByte := make([]byte, 0, 8) // If this ends up being faster, think about buffering this or clearing after use?
+		numByte = numByte[:0] // clear the array
 		for i := range num {
 			nb := num[i]
 			if nb == '.' {
@@ -34,12 +34,10 @@ func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 108 seconds. Twice
 			}
 			numByte = append(numByte, nb)
 		}
-		// Remove this after validating correctness
-		utils.PanicIf(len(numByte) > 8, fmt.Sprintf("numByte array should never exceed 8 bytes. Length = %d", len(numByte)))
 		return strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
 	}
 	// Brute force this. Read line by line and update a table
-	file := utils.PanicE(os.Open(p8.Path))
+	file := utils.PanicE(os.Open(p9.Path))
 	defer file.Close()
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
@@ -58,6 +56,7 @@ func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 108 seconds. Twice
 		}
 		measurement.Temps += temp
 		measurement.Count += 1
+		// PERF: Would min and max work on the strings themselves?
 		measurement.Max = max(measurement.Max, temp)
 		measurement.Min = min(measurement.Min, temp)
 	}
