@@ -44,7 +44,9 @@ func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 			continue
 		}
 
-		minMiss, maxMiss, avgMiss := compare(predicted, actual, errs)
+		err, minMiss, maxMiss, avgMiss := compare(predicted, actual)
+		errs = append(errs, err...)
+
 		totalMinMisses += minMiss
 		totalMaxMisses += maxMiss
 		totalAvgMisses += avgMiss
@@ -65,7 +67,7 @@ func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 	fmt.Printf("Cities Processed: %d, Cities Passed: %d, Cities Failed: %d\n", len(measurements), citiesPassed, citiesFailed)
 }
 
-func compare(predicted *model.Predicted, actual *model.Actual, errors []error) (int, int, int) {
+func compare(predicted *model.Predicted, actual *model.Actual) ([]error, int, int, int) {
 	errs := make([]error, 0)
 	minMiss, maxMiss, avgMiss := 0, 0, 0
 	if predicted.Min != actual.Min {
@@ -73,14 +75,14 @@ func compare(predicted *model.Predicted, actual *model.Actual, errors []error) (
 		errs = append(errs, fmt.Errorf("predicted Min = %s, actual = %s, city = %v", predicted.Min, actual.Min, predicted.City))
 	}
 	if predicted.Avg != actual.Avg {
-		maxMiss += 1
+		avgMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Avg = %s, actual = %s, city = %v", predicted.Avg, actual.Avg, predicted.City))
 	}
 	if predicted.Max != actual.Max {
-		avgMiss += 1
+		maxMiss += 1
 		errs = append(errs, fmt.Errorf("predicted Max = %s, actual = %s, city = %v", predicted.Max, actual.Max, predicted.City))
 	}
-	return minMiss, maxMiss, avgMiss
+	return errs, minMiss, maxMiss, avgMiss
 }
 
 func Errors(errs []error) string {
