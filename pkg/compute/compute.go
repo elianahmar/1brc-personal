@@ -16,10 +16,16 @@ func ComputeAvg(measurements map[string]*model.Measurement) {
 	fmt.Println("Computed the averages. Time to validate")
 }
 
-func ComputeAvgInt(measurements map[string]*model.MeasurementInt) {
-	for _, measurement := range measurements {
+func ComputeAvgInt(measurements map[string]*model.MeasurementInt) map[string]*model.Predicted {
+	predictions := make(map[string]*model.Predicted)
+	for city, measurement := range measurements {
 		avg := math.Round(float64(measurement.Temps) / float64(measurement.Count))
 		avg /= 10
-		measurement.Avg = utils.TruncateNaive(math.Round(avg), 0.1)
+		predictions[city] = &model.Predicted{
+			Min: utils.TruncateNaive(float64(measurement.Min)/10.0, 0.1),
+			Max: utils.TruncateNaive(float64(measurement.Max)/10.0, 0.1),
+			Avg: utils.TruncateNaive(math.Round(avg), 0.1),
+		}
 	}
+	return predictions
 }

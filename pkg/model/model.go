@@ -27,6 +27,13 @@ type Actual struct {
 	Avg  float64
 }
 
+type Predicted struct {
+	City string
+	Min  float64
+	Max  float64
+	Avg  float64
+}
+
 type Result struct {
 	City string
 	Min  float64
