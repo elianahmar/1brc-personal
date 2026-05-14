@@ -14,7 +14,7 @@ import (
 func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 	getActual := func(temps, city string) *model.Actual {
 		split := strings.Split(temps, "/")
-		min, max, avg := 0, 1, 2
+		min, avg, max := 0, 1, 2
 		return &model.Actual{
 			City: city,
 			Min:  split[min],
