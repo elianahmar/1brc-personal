@@ -68,7 +68,7 @@ func GetActualValue(temps string) model.Actual {
 	}
 }
 
-func validateNumbersInt(predicted *model.MeasurementInt, parsedMin, parsedAvg, parsedMax float64) ([]error, int, int, int) {
+func validateNumbersInt(predicted *model.Predicted, parsedMin, parsedAvg, parsedMax float64) ([]error, int, int, int) {
 	errs := make([]error, 0)
 	minMiss, maxMiss, avgMiss := 0, 0, 0
 	if predicted.Min != parsedMin {
