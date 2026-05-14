@@ -3,6 +3,7 @@ package preprocessor
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
@@ -126,6 +127,65 @@ func Benchmark_IntFromFloatCut(b *testing.B) { //
 			}
 			measurement.Temps += temp
 			measurement.Count += 1
+			measurement.Max = max(measurement.Max, temp)
+			measurement.Min = min(measurement.Min, temp)
+		}
+	}
+}
+
+func Benchmark_SimpleParserFull(b *testing.B) { // 108 seconds. New Record
+	// Inlining this function to keep everything on the stack
+	for b.Loop() {
+		fmt.Println("begin")
+		numByte := make([]byte, 0, 8)
+		cityByte := make([]byte, 0, 32)
+		parse := func(line []byte) (int, string) {
+			numByte = numByte[:0]   // clear the array
+			cityByte = cityByte[:0] // clear the array
+			L := 0
+			for {
+				nb := line[L]
+				if nb == ';' {
+					L += 1
+					break
+				}
+				numByte = append(numByte, nb)
+			}
+			for i := L; i < len(line); i++ {
+				nb := line[i]
+				if nb == '.' {
+					continue
+				} else if nb == '\n' {
+					break
+				} else {
+					cityByte = append(cityByte, nb)
+				}
+			}
+			fmt.Println("reached the end")
+			temp, _ := strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+			return temp, unsafe.String(&cityByte[0], len(cityByte))
+		}
+		// Brute force this. Read line by line and update a table
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		defer file.Close()
+		fileScanner := bufio.NewScanner(file)
+		fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
+		delim := []byte{';'}
+		measurements := make(map[string]*model.MeasurementInt, 512) // 512 bc it's power of 2
+		for fileScanner.Scan() {
+			line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
+			// process the line itself
+			city, num, _ := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
+			temp, _ := parse(num)
+			measurement, exists := measurements[unsafe.String(&city[0], len(city))] // Lookup trick. city underlying byte array can change but we can use it for lookup
+			if !exists {
+				cityName := string(city)
+				measurement = &model.MeasurementInt{City: cityName}
+				measurements[cityName] = measurement
+			}
+			measurement.Temps += temp
+			measurement.Count += 1
+			// PERF: Would min and max work on the strings themselves?
 			measurement.Max = max(measurement.Max, temp)
 			measurement.Min = min(measurement.Min, temp)
 		}
