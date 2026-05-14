@@ -55,16 +55,17 @@ func ValidateCorrectnessInt(measurements map[string]*model.MeasurementInt) {
 	fmt.Printf("Cities Processed: %d, Cities Passed: %d, Cities Failed: %d\n", len(measurements), citiesPassed, citiesFailed)
 }
 
-func convertTemperaturesInt(temps string) (float64, float64, float64) {
+func GetActualValue(temps string) model.Actual {
 	values := strings.Split(temps, "/")
 	minActual := utils.PanicE(strconv.ParseFloat(values[0], 32))
 	avgActual := utils.PanicE(strconv.ParseFloat(values[1], 32))
 	maxActual := utils.PanicE(strconv.ParseFloat(values[2], 32))
 
-	parsedMin := utils.TruncateNaive(minActual, 0.1)
-	parsedAvg := utils.TruncateNaive(avgActual, 0.1)
-	parsedMax := utils.TruncateNaive(maxActual, 0.1)
-	return parsedMin, parsedAvg, parsedMax
+	return model.Actual{
+		Min: utils.TruncateNaive(minActual, 0.1),
+		Avg: utils.TruncateNaive(avgActual, 0.1),
+		Max: utils.TruncateNaive(maxActual, 0.1),
+	}
 }
 
 func validateNumbersInt(predicted *model.MeasurementInt, parsedMin, parsedAvg, parsedMax float64) ([]error, int, int, int) {
