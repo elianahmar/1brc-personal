@@ -36,11 +36,11 @@ func ComputeAvg(measurements map[string]*model.Measurement) {
 func ComputeAvgStrConv(measurements map[string]*model.MeasurementInt) map[string]*model.Predicted {
 	predictions := make(map[string]*model.Predicted)
 	for city, measurement := range measurements {
-		min, max, avg := measurement.Min/10, measurement.Max/10, (measurement.Temps/measurement.Count)/10
+		avg := measurement.Temps / measurement.Count
 		predictions[city] = &model.Predicted{
 			City: city,
-			Min:  convertToStr(min),
-			Max:  convertToStr(max),
+			Min:  convertToStr(measurement.Min),
+			Max:  convertToStr(measurement.Max),
 			Avg:  convertToStr(avg),
 		}
 	}
@@ -51,10 +51,10 @@ func convertToStr(num int) string {
 	res := strings.Builder{}
 	numStr := strconv.Itoa(num)
 	N := len(numStr)
+
 	utils.PanicIf(N > 5, "") // Temp should never exceed 5 bytes (ex. -45.4)
 	for i := 0; i < N+1; i++ {
 		if i == N {
-			res.WriteByte('.')
 			continue
 		}
 		res.WriteByte(numStr[i])

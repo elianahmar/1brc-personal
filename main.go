@@ -96,8 +96,8 @@ func runImplementation(impl, path string, chansize *int) {
 		fmt.Println("Read the file and processed the lines")
 		p8 := pre.NewP8(path)
 		measurements := p8.Compute()
-		compute.ComputeAvgInt(measurements)
+		predictions := compute.ComputeAvgStrConv(measurements)
 		fmt.Println("Computed the averages. Time to validate")
-		validator.ValidateCorrectnessInt(measurements)
+		validator.ValidateCorrectnessInt(predictions)
 	}
 }
