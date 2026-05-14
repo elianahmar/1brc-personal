@@ -10,6 +10,37 @@ type Validation struct {
 	Avg  float64
 }
 
+type MeasurementInt struct {
+	City     string
+	Temps    int
+	TempsInt int
+	Count    int
+	Min      int
+	Max      int
+	Avg      float64
+}
+
+type Actual struct {
+	City string
+	Min  string
+	Max  string
+	Avg  string
+}
+
+type Predicted struct {
+	City string
+	Min  string
+	Max  string
+	Avg  string
+}
+
+type Result struct {
+	City string
+	Min  float64
+	Max  float64
+	Avg  float64
+}
+
 type Measurement struct {
 	City     string
 	Temps    float64

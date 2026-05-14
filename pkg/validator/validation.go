@@ -49,6 +49,8 @@ func ValidateCorrectness(measurements map[string]*model.Measurement) {
 	}
 
 	totalMisses := totalMinMisses + totalMaxMisses + totalAvgMisses
+
+	fmt.Println("Finished validating the answers")
 	fmt.Printf("Total Misses: %d, Min misses: %d, Max misses: %d, Avg misses: %d\n", totalMisses, totalMinMisses, totalMaxMisses, totalAvgMisses)
 	fmt.Printf("Cities Processed: %d, Cities Passed: %d, Cities Failed: %d\n", len(measurements), citiesPassed, citiesFailed)
 }

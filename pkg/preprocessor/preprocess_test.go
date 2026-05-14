@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/model"
 	m "github.com/throwea/1brc-go/pkg/model"
@@ -273,6 +274,63 @@ func BenchmarkFileScanning_1mbBuffer(b *testing.B) { // 1.481s (Small Data) 15.6
 		fileScanner.Buffer(make([]byte, bufSize), 1024)
 		for fileScanner.Scan() {
 			fileScanner.Bytes()
+			// process the line itself
+		}
+	}
+}
+
+// Full Dataset -> 28 seconds
+// Using this benchmark to see if it's faster to convert to int then convert to float
+func Benchmark_IntFromFloat(b *testing.B) {
+	parse := func(num []byte) (int, error) {
+		numByte := make([]byte, 0, 8)
+		if len(num) > 8 {
+			b.Errorf("temperature should never exceed 8 bytes. Found = %d bytes", len(num))
+		}
+		for i := range num {
+			nb := num[i]
+			if nb == '.' {
+				continue
+			}
+			numByte = append(numByte, num[i])
+		}
+		return strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+	}
+	for b.Loop() {
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		defer file.Close()
+		mb := 1
+		bufSize := mb * 1024 * 1024
+		delim := []byte{';'}
+		fileScanner := bufio.NewScanner(file)
+		fileScanner.Buffer(make([]byte, bufSize), 1024)
+		for fileScanner.Scan() {
+			line := fileScanner.Bytes()
+			_, num, _ := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
+			_, err := parse(num)
+			if err != nil {
+				b.Errorf("failed to parse the num, %v", err)
+			}
+			// process the line itself
+		}
+	}
+}
+
+// Full Dataset -> 36.812
+// Suspicion confirmed. It's faster to parse the string and convert to int then convert to floating point
+func Benchmark_KeepFloat(b *testing.B) {
+	for b.Loop() {
+		file := utils.PanicE(os.Open("../../../1brc-go/measurements.txt"))
+		defer file.Close()
+		mb := 1
+		bufSize := mb * 1024 * 1024
+		delim := []byte{';'}
+		fileScanner := bufio.NewScanner(file)
+		fileScanner.Buffer(make([]byte, bufSize), 1024)
+		for fileScanner.Scan() {
+			line := fileScanner.Bytes()
+			_, num, _ := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
+			strconv.ParseFloat(unsafe.String(&num[0], len(num)), 64)
 			// process the line itself
 		}
 	}
