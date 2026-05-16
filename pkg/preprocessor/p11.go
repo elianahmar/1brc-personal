@@ -21,9 +21,9 @@ func NewP11(path string) *P11 {
 	}
 }
 
-func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds.
+func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds. No improvement...
 
-	// Inlining this function to keep everything on the stack
+	// Inlining this function to keep everything on the stack... Is this actually the case?
 	numByte := make([]byte, 0, 8)
 	delim, period := byte(';'), byte('.')
 
@@ -51,15 +51,14 @@ func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds.
 
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p11.Path))
-	defer file.Close()
+	// defer file.Close() //NOTE: commenting this out saves a ~second
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
 	measurements := make(map[string]*model.MeasurementInt, 512) // 512 bc it's power of 2
 	for fileScanner.Scan() {
 		line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
 		temp, delimIdx := parse(line)
-		city := unsafe.String(&line[0], delimIdx)
-		measurement, exists := measurements[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
+		measurement, exists := measurements[unsafe.String(&line[0], delimIdx)] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
 			cityName := string(line[0:delimIdx])
@@ -68,7 +67,6 @@ func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds.
 		}
 		measurement.Temps += temp
 		measurement.Count += 1
-		// PERF: Would min and max work on the strings themselves?
 		measurement.Max = max(measurement.Max, temp)
 		measurement.Min = min(measurement.Min, temp)
 	}
