@@ -22,7 +22,7 @@ func NewP9(path string) *P9 {
 	}
 }
 
-func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 108 seconds. New Record
+func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 44 seconds. New Record
 	// Inlining this function to keep everything on the stack
 	numByte := make([]byte, 0, 8)
 	parse := func(num []byte) (int, error) {
