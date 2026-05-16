@@ -31,10 +31,11 @@ func main() {
 }
 
 func runCalculations() {
+	impl, path := os.Args[1], os.Args[2]
 	dayMonthYear := utils.DayMonthYear()
 	files.CreateDir(dayMonthYear)
-	cpuFile := fmt.Sprintf("./documentation/%s/%s-cpu.prof", dayMonthYear, dayMonthYear)
-	memFile := fmt.Sprintf("./documentation/%s/%s-mem.prof", dayMonthYear, dayMonthYear)
+	cpuFile := fmt.Sprintf("./documentation/%s/%s-%s-cpu.prof", dayMonthYear, dayMonthYear, impl)
+	memFile := fmt.Sprintf("./documentation/%s/%s-%s-mem.prof", dayMonthYear, dayMonthYear, impl)
 
 	cpuProfile := utils.PanicE(os.Create(cpuFile))
 	memProfile := utils.PanicE(os.Create(memFile))
@@ -54,7 +55,7 @@ func runCalculations() {
 		defChanSize := 1000000000
 		chansize = &defChanSize
 	}
-	runImplementation(os.Args[1], os.Args[2], chansize)
+	runImplementation(impl, path, chansize)
 	utils.PanicE(struct{}{}, pprof.WriteHeapProfile(memProfile))
 }
 
