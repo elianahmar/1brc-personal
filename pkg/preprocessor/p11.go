@@ -26,10 +26,12 @@ func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds. No i
 	// Inlining this function to keep everything on the stack... Is this actually the case?
 	numByte := make([]byte, 0, 8)
 	delim, period := byte(';'), byte('.')
+	L, N, temp := 0, 0, 0
 
+	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
 	parse := func(line []byte) (int, int) {
 		numByte = numByte[:0] // clear the array
-		L, N := 0, len(line)
+		L, N = 0, len(line)
 		for line[L] != delim {
 			L += 1
 		}
@@ -45,7 +47,7 @@ func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds. No i
 		// NOTE: Just had this idea. Might be able to remove numByte and CityByte array
 		// entirely and just do unsafe string on the length and find the index of the ';' char
 		// In future attempts, might just be able to override scanner implementation. I think they expose the interfaces
-		temp, _ := strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+		temp, _ = strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
 		return temp, delimIdx
 	}
 
@@ -72,6 +74,11 @@ func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds. No i
 	}
 	return measurements
 }
+
+// TODO: implement a Reader and pass it to bufio.NewReaderSize
+// func foo() {
+// 	reader := bufio.NewReaderSize(2 * 1024 * 1024)
+// }
 
 // NOTE: Personal note about floating point representation in golang
 // for float32, [1][8][23] => sign, exponent, fraction respectively
