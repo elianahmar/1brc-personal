@@ -29,13 +29,10 @@ func Test_SimpleParser(t *testing.T) {
 
 		for L < len(line) {
 			nb := line[L]
-			if nb == period {
-				L += 1
-				continue
-			} else {
+			if nb != period {
 				numByte = append(numByte, nb)
-				L += 1
 			}
+			L += 1
 		}
 		fmt.Println("string numbyte: ", string(numByte))
 		fmt.Println("string citybyte: ", string(cityByte))
@@ -45,13 +42,13 @@ func Test_SimpleParser(t *testing.T) {
 	line := []byte("Baltimore;12.0")
 	fmt.Printf("line length = %d\n", len(line))
 	temp, city := parse(line)
-	fmt.Println("temp + ", temp)
-	fmt.Println("city + ", city)
-	fmt.Printf("%s;%d\n", city, temp)
-	if strings.EqualFold(city, "Baltimore") {
+	fmt.Println("temp = ", temp)
+	fmt.Println("city = ", city)
+	fmt.Printf("Full Line = %s;%d\n", city, temp)
+	if !strings.EqualFold(city, "Baltimore") {
 		t.Errorf("city is not correct; expected: Baltimore, actual: %s", city)
 	}
-	if temp == 120 {
+	if temp != 120 {
 		t.Errorf("temp is not correct; expected: 120, actual: %d", temp)
 	}
 }
