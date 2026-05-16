@@ -38,8 +38,8 @@ func ComputeAvgStrConv(measurements map[string]*model.MeasurementInt) map[string
 	predictions := make(map[string]*model.Predicted)
 	fmt.Println(printFullMeasurements(measurements))
 	for city, measurement := range measurements {
-		//
-		avg := measurement.Temps / measurement.Count
+		// NOTE: for final answers that have 0 as significand. I need to prepend zero to that result
+		avg := int(float64(measurement.Temps) / float64(measurement.Count))
 		predictions[city] = &model.Predicted{
 			City: city,
 			Min:  convertToStr(measurement.Min),

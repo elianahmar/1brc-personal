@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"unsafe"
@@ -296,5 +297,21 @@ func Benchmark_KeepFloat(b *testing.B) {
 			strconv.ParseFloat(unsafe.String(&num[0], len(num)), 64)
 			// process the line itself
 		}
+	}
+}
+
+func Benchmark_CopyByte(b *testing.B) {
+	for b.Loop() {
+		line := []byte("Baltimore")
+		_ = unsafe.String(&line[0], len(line))
+		_ = string(line)
+	}
+}
+
+func Benchmark_CopyString(b *testing.B) {
+	for b.Loop() {
+		line := []byte("Baltimore")
+		city := unsafe.String(&line[0], len(line))
+		_ = strings.Clone(city)
 	}
 }
