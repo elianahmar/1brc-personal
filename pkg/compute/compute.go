@@ -33,9 +33,11 @@ func ComputeAvg(measurements map[string]*model.Measurement) {
 //		return predictions
 //	}
 
+// NOTE: If temps is positive let's ceil the Temps/Avg, else floor it
 func ComputeAvgStrConv(measurements map[string]*model.MeasurementInt) map[string]*model.Predicted {
 	predictions := make(map[string]*model.Predicted)
 	for city, measurement := range measurements {
+		//
 		avg := measurement.Temps / measurement.Count
 		predictions[city] = &model.Predicted{
 			City: city,
