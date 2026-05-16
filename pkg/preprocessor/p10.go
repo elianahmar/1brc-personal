@@ -28,7 +28,7 @@ func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 108 seconds. New
 	cityByte := make([]byte, 0, 32)
 	delim, period := byte(';'), byte('.')
 
-	parse := func(line []byte) (int, string) {
+	parse := func(line []byte) (int, []byte) {
 		numByte = numByte[:0]   // clear the array
 		cityByte = cityByte[:0] // clear the array
 		L, N := 0, len(line)
@@ -52,8 +52,9 @@ func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 108 seconds. New
 		// entirely and just do unsafe string on the length and find the index of the ';' char
 		// In future attempts, might just be able to override scanner implementation. I think they expose the interfaces
 		temp, _ := strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
-		return temp, unsafe.String(&cityByte[0], len(cityByte))
+		return temp, cityByte
 	}
+
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p10.Path))
 	defer file.Close()
@@ -62,12 +63,12 @@ func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 108 seconds. New
 	measurements := make(map[string]*model.MeasurementInt, 512) // 512 bc it's power of 2
 	for fileScanner.Scan() {
 		line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
-		// process the line itself
-		temp, city := parse(line)
-		// fmt.Printf("%s;%d\n", city, temp)
+		temp, cityByte := parse(line)
+		city := unsafe.String(&cityByte[0], len(cityByte))
 		measurement, exists := measurements[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
-			cityName := string(city)
+			// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
+			cityName := string(cityByte)
 			measurement = &model.MeasurementInt{City: cityName}
 			measurements[cityName] = measurement
 		}
