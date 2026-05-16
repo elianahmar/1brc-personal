@@ -50,6 +50,7 @@ func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 108 seconds. New
 		}
 		// NOTE: Just had this idea. Might be able to remove numByte and CityByte array
 		// entirely and just do unsafe string on the length and find the index of the ';' char
+		// In future attempts, might just be able to override scanner implementation. I think they expose the interfaces
 		temp, _ := strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
 		return temp, unsafe.String(&cityByte[0], len(cityByte))
 	}
@@ -67,8 +68,7 @@ func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 108 seconds. New
 		measurement, exists := measurements[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			cityName := string(city)
-			measurement = &model.MeasurementInt{City: cityName}
-			measurements[cityName] = measurement
+			measurements[cityName] = &model.MeasurementInt{City: cityName}
 		}
 		measurement.Temps += temp
 		measurement.Count += 1
