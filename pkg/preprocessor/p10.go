@@ -68,7 +68,8 @@ func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 108 seconds. New
 		measurement, exists := measurements[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			cityName := string(city)
-			measurements[cityName] = &model.MeasurementInt{City: cityName}
+			measurement = &model.MeasurementInt{City: cityName}
+			measurements[cityName] = measurement
 		}
 		measurement.Temps += temp
 		measurement.Count += 1
