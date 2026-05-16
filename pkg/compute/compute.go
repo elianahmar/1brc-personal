@@ -36,6 +36,7 @@ func ComputeAvg(measurements map[string]*model.Measurement) {
 // NOTE: If temps is positive let's ceil the Temps/Avg, else floor it
 func ComputeAvgStrConv(measurements map[string]*model.MeasurementInt) map[string]*model.Predicted {
 	predictions := make(map[string]*model.Predicted)
+	fmt.Println(printFullMeasurements(measurements))
 	for city, measurement := range measurements {
 		//
 		avg := measurement.Temps / measurement.Count
@@ -60,6 +61,15 @@ func convertToStr(num int) string {
 			res.WriteByte('.')
 		}
 		res.WriteByte(numStr[i])
+	}
+	return res.String()
+}
+
+func printFullMeasurements(measurements map[string]*model.MeasurementInt) string {
+	res := strings.Builder{}
+	for city, mment := range measurements {
+		line := fmt.Sprintf("City = %s, Min = %d, Max = %d, Count = %d, Temps = %d\n", city, mment.Min, mment.Max, mment.Count, mment.Temps)
+		res.WriteString(line)
 	}
 	return res.String()
 }
