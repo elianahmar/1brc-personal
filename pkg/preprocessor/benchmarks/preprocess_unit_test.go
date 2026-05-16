@@ -79,3 +79,32 @@ func Test_ParseNum(t *testing.T) {
 		t.Errorf("temp is not correct; expected: 120, actual: %d", temp)
 	}
 }
+
+func Test_FindDelimIdx(t *testing.T) {
+	delim := byte(';')
+	parse := func(line []byte) int {
+		L := 0
+		for {
+			nb := line[L]
+			if nb == delim {
+				break
+			}
+			L += 1
+		}
+		return L
+	}
+	line := []byte("Baltimore;12.0")
+	N := len(line)
+	delimIdx := parse(line)
+	city := unsafe.String(&line[0], delimIdx)
+	fmt.Printf("city = %s\n", city)
+	temp, _ := strconv.Atoi(unsafe.String(&line[delimIdx+1], N))
+
+	fmt.Println("temp + ", temp)
+	if !strings.EqualFold(city, "Baltimore") {
+		t.Errorf("city is not correct; expected: Baltimore, actual: %s", city)
+	}
+	if temp != 120 {
+		t.Errorf("temp is not correct; expected: 120, actual: %d", temp)
+	}
+}
