@@ -25,33 +25,34 @@ func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 108 seconds. New
 	// Inlining this function to keep everything on the stack
 	numByte := make([]byte, 0, 8)
 	cityByte := make([]byte, 0, 32)
-	delim, newline, period := byte(';'), byte('\n'), byte('.')
-	parse := func(num []byte) (int, string) {
+	delim, period := byte(';'), byte('.')
+	parse := func(line []byte) (int, string) {
 		numByte = numByte[:0]   // clear the array
 		cityByte = cityByte[:0] // clear the array
 		L := 0
+		N := len(line)
 		for {
-			nb := num[L]
+			nb := line[L]
 			if nb == delim {
 				L += 1
 				break
 			}
-			numByte = append(numByte, nb)
+			cityByte = append(cityByte, nb)
+			L += 1
 		}
-
-		for {
-			nb := num[L]
+		for L < N {
+			nb := line[L]
 			if nb == period {
 				L += 1
 				continue
-			} else if nb == newline {
-				break
 			} else {
-				cityByte = append(cityByte, nb)
+				numByte = append(numByte, nb)
+				L += 1
 			}
 		}
 		temp, _ := strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
-		return temp, unsafe.String(&cityByte[0], len(cityByte))
+		city := unsafe.String(&cityByte[0], len(cityByte))
+		return temp, city
 	}
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p10.Path))
