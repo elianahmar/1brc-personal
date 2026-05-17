@@ -315,3 +315,27 @@ func Benchmark_CopyString(b *testing.B) {
 		_ = strings.Clone(city)
 	}
 }
+
+// IndexByte is twice as fast which makes sense. Not sure why the full implementation is slower
+func Benchmark_IndexByte(b *testing.B) { // 2.793 ns/op
+	for b.Loop() {
+		line := []byte("Baltimore;12.0")
+		delimidx := bytes.IndexByte(line, ';')
+		if delimidx != 9 {
+			b.Errorf("index not correct")
+		}
+	}
+}
+
+func Benchmark_ManualIndexByte(b *testing.B) { // 4.227 ns/op
+	for b.Loop() {
+		line := []byte("Baltimore;12.0")
+		L := 0
+		for line[L] != ';' {
+			L += 1
+		}
+		if L != 9 {
+			b.Errorf("index not correct")
+		}
+	}
+}
