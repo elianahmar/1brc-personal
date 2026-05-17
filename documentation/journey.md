@@ -77,3 +77,12 @@ Showing top 10 nodes out of 64
   - removed panic checks brought me from 55 -> 53s
   - used built in min/max and that brought me down to 51.4 seconds
 
+
+### 10th day 5/17/26
+- Made many improvements. The I have implemented a simple parser to parse each line instead of using bytes.Cut which has additional checks I don't really need
+- MOreover, my simple parser allowed for some clever tricks. For example, I know city is first. So, when I parse, I can just move my pointer to the point where the ';' delimeter appears and everything before that can be turned into unsafe string. Then for the number, I can reuse a byte array and capture all of the digits and cast them to int by skipping the '.' byte. This worked really well and shaved about 8 seconds off of the implementation
+- Also, I learned that you can use `list <function_name>` to see the exact time each line of code takes in your program. Which is very powerful. This helped me notice that a majority of my program is still taking alot of time in making syscalls to read the file. So their is still some optimizations I can do their
+- At this point, this challenge is about remove as much code as possible and fine tuning a solution on this data. 
+- Also, another thing I learned by reading the source code from go...
+  - Some functions have `//go:noescape` tags to them. This means that the implementation resides somewhere else (most likely assembly). If it's in assembly it's blazing fast. Also, this tells the compiler that values for this function do NOT escape to the heap
+  - Also some files have `//go:build 386 || (amd64 && !plan9) ...`. What this indicates is that this file should be included in the build when the target CPU architecture matches whatever is mentioned in the comment. Essentially, this will tell the compiler whether to include the file in the binary if the computer you are building on has a CPU matching the architecture defined in the comment.

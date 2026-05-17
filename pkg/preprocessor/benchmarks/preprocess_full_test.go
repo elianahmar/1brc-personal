@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/model"
+	"github.com/throwea/1brc-go/pkg/preprocessor"
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
@@ -189,5 +190,72 @@ func Benchmark_SimpleParserFull(b *testing.B) { // 108 seconds. New Record
 			measurement.Max = max(measurement.Max, temp)
 			measurement.Min = min(measurement.Min, temp)
 		}
+	}
+}
+
+func Benchmark_SimpleParserIndexByte(b *testing.B) {
+	// Inlining this function to keep everything on the stack
+	numByte := make([]byte, 0, 8)
+	delim, period := byte(';'), byte('.')
+	L, N, temp := 0, 0, 0
+
+	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
+	parse := func(line []byte) (int, int) {
+		numByte = numByte[:0] // clear the array
+		N = len(line)
+		delimIdx := bytes.IndexByte(line, delim)
+		L = delimIdx + 1
+		for L < N {
+			nb := line[L]
+			if nb != period {
+				numByte = append(numByte, nb)
+			}
+			L += 1
+		}
+		// NOTE: Just had this idea. Might be able to remove numByte and CityByte array
+		// entirely and just do unsafe string on the length and find the index of the ';' char
+		// In future attempts, might just be able to override scanner implementation. I think they expose the interfaces
+		temp, _ = strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+		return temp, delimIdx
+	}
+	for b.Loop() {
+
+		fmt.Println("begin")
+		file := utils.PanicE(os.Open("../../../../1brc-go/measurements.txt"))
+		defer file.Close()
+		fileScanner := bufio.NewScanner(file)
+		fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
+		measurements := make(map[string]*model.MeasurementInt, 512) // 512 bc it's power of 2
+		for fileScanner.Scan() {
+
+			line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
+			temp, delimIdx := parse(line)
+			measurement, exists := measurements[unsafe.String(&line[0], delimIdx)] // Lookup trick. city underlying byte array can change but we can use it for lookup
+			if !exists {
+				// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
+				cityName := string(line[0:delimIdx])
+				measurement = &model.MeasurementInt{City: cityName}
+				measurements[cityName] = measurement
+			}
+			measurement.Temps += temp
+			measurement.Count += 1
+			measurement.Max = max(measurement.Max, temp)
+			measurement.Min = min(measurement.Min, temp)
+
+		}
+	}
+}
+
+func Benchmark_P12(b *testing.B) { // 44.30 seconds
+	p12 := preprocessor.NewP12("../../../../1brc-go/measurements.txt")
+	for b.Loop() {
+		p12.Compute()
+	}
+}
+
+func Benchmark_P11(b *testing.B) { // 39.82 seconds
+	p11 := preprocessor.NewP11("../../../../1brc-go/measurements.txt")
+	for b.Loop() {
+		p11.Compute()
 	}
 }
