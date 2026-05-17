@@ -2,11 +2,9 @@
 - Benchmark all of the parts of my program. 
   - Benchmark the file reading
   - Decompose the different parts down in the benchmark so I can compare performance
-- Convert floating point to ints and do conversion once at the end
 - Have final validation being written as a json object. So I can jq over it
 - Fix the under by .1 issue. Thinking it's an issue with truncating
 - Aim for under 15 seconds
-- Add unit tests for the simple parser. I don't think it's working quite right
 
 ### Constraints
 - Can only use std library packages
@@ -30,3 +28,5 @@
 - Add support for command line args
 - Utilize unsafe for zero allocations. Halved my runtime
 - Benchmark bufio.Reader versus scanner (using ReadSlice('\n')) -> DONE
+- Add unit tests for the simple parser. I don't think it's working quite right
+- Convert floating point to ints and do conversion once at the end
