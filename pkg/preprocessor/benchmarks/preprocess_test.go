@@ -339,3 +339,70 @@ func Benchmark_ManualIndexByte(b *testing.B) { // 4.227 ns/op
 		}
 	}
 }
+
+func Benchmark_ParserP12(b *testing.B) { // 16.29 ns/op
+	// Inlining this function to keep everything on the stack... Is this actually the case?
+	numByte := make([]byte, 0, 8)
+	delim, period := byte(';'), byte('.')
+	L, N, temp := 0, 0, 0
+
+	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
+	parse := func(line []byte) (int, int) {
+		numByte = numByte[:0] // clear the array
+		N = len(line)
+		delimIdx := bytes.IndexByte(line, delim)
+		L = delimIdx + 1
+		for L < N {
+			nb := line[L]
+			if nb != period {
+				numByte = append(numByte, nb)
+			}
+			L += 1
+		}
+		// NOTE: Just had this idea. Might be able to remove numByte and CityByte array
+		// entirely and just do unsafe string on the length and find the index of the ';' char
+		// In future attempts, might just be able to override scanner implementation. I think they expose the interfaces
+		temp, _ = strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+		return temp, delimIdx
+	}
+
+	for b.Loop() {
+		line := []byte("Baltimore;12.0")
+		parse(line)
+	}
+}
+
+func Benchmark_ParserP11(b *testing.B) { // 18.29 ns/op
+	// Inlining this function to keep everything on the stack... Is this actually the case?
+	numByte := make([]byte, 0, 8)
+	delim, period := byte(';'), byte('.')
+	L, N, temp := 0, 0, 0
+
+	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
+	parse := func(line []byte) (int, int) {
+		numByte = numByte[:0] // clear the array
+		L, N = 0, len(line)
+		for line[L] != delim {
+			L += 1
+		}
+		delimIdx := L
+		L += 1
+		for L < N {
+			nb := line[L]
+			if nb != period {
+				numByte = append(numByte, nb)
+			}
+			L += 1
+		}
+		// NOTE: Just had this idea. Might be able to remove numByte and CityByte array
+		// entirely and just do unsafe string on the length and find the index of the ';' char
+		// In future attempts, might just be able to override scanner implementation. I think they expose the interfaces
+		temp, _ = strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+		return temp, delimIdx
+	}
+
+	for b.Loop() {
+		line := []byte("Baltimore;12.0")
+		parse(line)
+	}
+}

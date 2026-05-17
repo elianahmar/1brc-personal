@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/model"
+	"github.com/throwea/1brc-go/pkg/preprocessor"
 	"github.com/throwea/1brc-go/pkg/utils"
 )
 
@@ -242,5 +243,19 @@ func Benchmark_SimpleParserIndexByte(b *testing.B) {
 			measurement.Min = min(measurement.Min, temp)
 
 		}
+	}
+}
+
+func Benchmark_P12(b *testing.B) { // 44.30 seconds
+	p12 := preprocessor.NewP12("../../../../1brc-go/measurements.txt")
+	for b.Loop() {
+		p12.Compute()
+	}
+}
+
+func Benchmark_P11(b *testing.B) { // 39.82 seconds
+	p11 := preprocessor.NewP11("../../../../1brc-go/measurements.txt")
+	for b.Loop() {
+		p11.Compute()
 	}
 }

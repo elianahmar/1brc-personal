@@ -28,7 +28,6 @@ func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds. No i
 	delim, period := byte(';'), byte('.')
 	L, N, temp := 0, 0, 0
 
-	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
 	parse := func(line []byte) (int, int) {
 		numByte = numByte[:0] // clear the array
 		L, N = 0, len(line)
@@ -44,16 +43,12 @@ func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds. No i
 			}
 			L += 1
 		}
-		// NOTE: Just had this idea. Might be able to remove numByte and CityByte array
-		// entirely and just do unsafe string on the length and find the index of the ';' char
-		// In future attempts, might just be able to override scanner implementation. I think they expose the interfaces
 		temp, _ = strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
 		return temp, delimIdx
 	}
 
 	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p11.Path))
-	// defer file.Close() //NOTE: commenting this out saves a ~second
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
 	measurements := make(map[string]*model.MeasurementInt, 512) // 512 bc it's power of 2
