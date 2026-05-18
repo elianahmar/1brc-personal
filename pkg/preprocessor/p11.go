@@ -74,12 +74,3 @@ func (p11 *P11) Compute() map[string]*model.MeasurementInt { // 38 seconds. No i
 	}
 	return measurements
 }
-
-// TODO: implement a Reader and pass it to bufio.NewReaderSize
-// func foo() {
-// 	reader := bufio.NewReaderSize(2 * 1024 * 1024)
-// }
-
-// NOTE: Personal note about floating point representation in golang
-// for float32, [1][8][23] => sign, exponent, fraction respectively
-// for float64, [1][11][52] => sign, exponent, fraction respectively

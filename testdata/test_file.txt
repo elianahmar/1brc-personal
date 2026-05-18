@@ -1,0 +1,9 @@
+Baltimore;12.0
+New York City;-1.0
+Boise;1.0
+Chicago;5.0
+Madison;-12.0
+Bentonville;10.0
+San Diego;16.0
+Guam;2.0
+

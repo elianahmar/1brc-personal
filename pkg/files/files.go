@@ -1,7 +1,9 @@
 package files
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 
 	u "github.com/throwea/1brc-go/pkg/utils"
@@ -12,4 +14,96 @@ func CreateDir(dmy string) {
 	newDir := fmt.Sprintf("documentation/%s", dmy)
 	u.PanicE(os.ReadDir("documentation"))
 	u.PanicE(struct{}{}, os.MkdirAll(newDir, 0o755))
+}
+
+type Range struct {
+	Start int64
+	End   int64
+}
+
+//
+// func ChunkFile(path string) []Range {
+// 	file, _ := os.Open(path)
+// 	defer file.Close()
+//
+// 	info, _ := file.Stat()
+// 	size := info.Size()
+//
+// 	workers := 4
+//
+// 	chunkSize := size / int64(workers)
+// 	fmt.Println("chunksize = ", strconv.FormatInt(chunkSize, 10))
+//
+// 	ranges := make([]Range, 0, workers)
+// 	lastOffset := int64(0)
+// 	for i := 0; i < workers; i++ {
+// 		buffer := make([]byte, chunkSize)
+// 		n := utils.PanicE(file.ReadAt(buffer, chunkSize))
+// 		// Find the last index byte and set that as the end
+// 		lastNewline := int64(bytes.LastIndexByte(buffer, '\n'))
+// 		distFromNewLine := len(buffer) - lastNewLine
+// 		ranges = append(ranges, Range{Start: lastOffset, End: int64(lastNewline)})
+// 		lastOffset = lastNewline + 1
+// 	}
+// 	return ranges
+// }
+
+func ChunkFile(path string) {
+	file, _ := os.Open(path)
+	defer file.Close()
+
+	chunkSize := 16 // bytes
+	info, err := file.Stat()
+	if err != nil {
+		panic("can't file.Stat()")
+	}
+	fmt.Printf("file size = %d\n", info.Size())
+
+	buffer := make([]byte, chunkSize)
+	for {
+		bytesRead, err := file.Read(buffer)
+		if err != nil && err != io.EOF {
+			fmt.Printf("Error reading the file: %v\n", err)
+		}
+		if bytesRead == 0 {
+			break
+		}
+		fmt.Println(string(buffer))
+	}
+}
+
+func ChunkFileImproved(path string) []Range {
+	file, _ := os.Open(path)
+
+	chunkSize := 4 * 1024 * 1024 // 4mb
+	info, err := file.Stat()
+	if err != nil {
+		panic("no stat")
+	}
+	fmt.Printf("file size = %d\n", info.Size())
+	buffer := make([]byte, chunkSize)
+	fileSize := info.Size()
+	maxLen := fileSize / int64(chunkSize)
+	remainder := fileSize%int64(chunkSize) > 0
+	if remainder {
+		maxLen++
+	}
+	ranges := make([]Range, 0, maxLen)
+	lastOffset := int64(0)
+	newline := byte('\n')
+	for {
+		bytesRead, err := file.ReadAt(buffer, lastOffset)
+		if err != nil && err != io.EOF {
+			panic("Error reading the file")
+		}
+		if bytesRead == 0 {
+			break
+		}
+		lastNewline := int64(bytes.LastIndexByte(buffer, newline))
+		ending := int64(lastOffset + lastNewline)
+		ranges = append(ranges, Range{Start: lastOffset, End: ending})
+		lastOffset = ending + 1
+	}
+	fmt.Printf("Len(ranges) = %d, maxLen = %d", len(ranges), maxLen)
+	return ranges
 }
