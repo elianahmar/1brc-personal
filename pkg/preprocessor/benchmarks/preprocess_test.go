@@ -430,34 +430,3 @@ func Benchmark_Plus(b *testing.B) { // 1.0 ns/op
 		b.Errorf("L not incremented")
 	}
 }
-
-func Benchmark_ComputeRanges(b *testing.B) {
-	for b.Loop() {
-		// NOTE: this is what I'm trying to do
-		// I want to create byte chunks that always contain valid lines
-		// So what I will need to do is define the chunk size
-		// Then I will need to read everything up to that chunk and everything up to the next new line break
-		// So first thing I need to do is create a test file with 100 or so lines
-
-		file := utils.PanicE(os.Open("../../../../1brc-go/measurements.txt"))
-
-		fileStats := utils.PanicE(file.Stat())
-		fileSizeBytes := fileStats.Size()
-		chunkSize := 100000 // bytes
-
-		goRoutines := fileSizeBytes / int64(chunkSize)
-
-		hasLeftover := fileSizeBytes%int64(chunkSize) > 0
-		if hasLeftover {
-			goRoutines += 1
-		}
-		chunks := make([]m.Chunk, goRoutines)
-		for i := 0; i < int(goRoutines); i++ {
-
-			chunks[i].BufSize = chunkSize
-			chunks[i].Offset = i * chunkSize
-			chunks[i].Idx = i
-		}
-
-	}
-}
