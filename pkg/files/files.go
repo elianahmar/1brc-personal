@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/throwea/1brc-go/pkg/model"
 	u "github.com/throwea/1brc-go/pkg/utils"
 )
 
@@ -14,11 +15,6 @@ func CreateDir(dmy string) {
 	newDir := fmt.Sprintf("documentation/%s", dmy)
 	u.PanicE(os.ReadDir("documentation"))
 	u.PanicE(struct{}{}, os.MkdirAll(newDir, 0o755))
-}
-
-type Range struct {
-	Start int64
-	End   int64
 }
 
 //
@@ -72,7 +68,7 @@ func ChunkFile(path string) {
 	}
 }
 
-func ChunkFileImproved(path string) []Range {
+func ChunkFileImproved(path string) []model.Range {
 	file, _ := os.Open(path)
 
 	chunkSize := 4 * 1024 * 1024 // 4mb
@@ -80,7 +76,6 @@ func ChunkFileImproved(path string) []Range {
 	if err != nil {
 		panic("no stat")
 	}
-	fmt.Printf("file size = %d\n", info.Size())
 	buffer := make([]byte, chunkSize)
 	fileSize := info.Size()
 	maxLen := fileSize / int64(chunkSize)
@@ -88,7 +83,7 @@ func ChunkFileImproved(path string) []Range {
 	if remainder {
 		maxLen++
 	}
-	ranges := make([]Range, 0, maxLen)
+	ranges := make([]model.Range, 0, maxLen)
 	lastOffset := int64(0)
 	newline := byte('\n')
 	for {
@@ -101,7 +96,7 @@ func ChunkFileImproved(path string) []Range {
 		}
 		lastNewline := int64(bytes.LastIndexByte(buffer, newline))
 		ending := int64(lastOffset + lastNewline)
-		ranges = append(ranges, Range{Start: lastOffset, End: ending})
+		ranges = append(ranges, model.Range{Start: lastOffset, End: ending})
 		lastOffset = ending + 1
 	}
 	fmt.Printf("Len(ranges) = %d, maxLen = %d", len(ranges), maxLen)
