@@ -259,3 +259,10 @@ func Benchmark_P11(b *testing.B) { // 39.82 seconds
 		p11.Compute()
 	}
 }
+
+func Benchmark_P13(b *testing.B) { // 12.968 seconds
+	p13 := preprocessor.NewP13("../../../../1brc-go/measurements.txt")
+	for b.Loop() {
+		p13.Compute()
+	}
+}
