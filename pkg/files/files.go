@@ -72,40 +72,38 @@ func ChunkFile(path string) {
 	}
 }
 
-// TODO: still having two bugs
-// First, the endpoints are wrong and aren't ending on newline chars
-// Second, we aren't processing until the end
 func ChunkFileImproved(path string) []Range {
 	file, _ := os.Open(path)
 
-	chunkSize := int64(32)
+	chunkSize := 4 * 1024 * 1024 // 4mb
 	info, err := file.Stat()
 	if err != nil {
 		panic("no stat")
 	}
 	fmt.Printf("file size = %d\n", info.Size())
 	buffer := make([]byte, chunkSize)
-	ranges := make([]Range, 0)
+	fileSize := info.Size()
+	maxLen := fileSize / int64(chunkSize)
+	remainder := fileSize%int64(chunkSize) > 0
+	if remainder {
+		maxLen++
+	}
+	ranges := make([]Range, 0, maxLen)
 	lastOffset := int64(0)
 	newline := byte('\n')
 	for {
 		bytesRead, err := file.ReadAt(buffer, lastOffset)
 		if err != nil && err != io.EOF {
-			fmt.Printf("Error reading the file: %v\n", err)
+			panic("Error reading the file")
 		}
 		if bytesRead == 0 {
 			break
 		}
 		lastNewline := int64(bytes.LastIndexByte(buffer, newline))
 		ending := int64(lastOffset + lastNewline)
-		fmt.Printf("lastOffset + lastNewline = %d + %d = %d\n", lastOffset, lastNewline, ending)
-		// fmt.Println(string(buffer))
-		part := Range{
-			Start: lastOffset,
-			End:   ending,
-		}
-		ranges = append(ranges, part)
+		ranges = append(ranges, Range{Start: lastOffset, End: ending})
 		lastOffset = ending + 1
 	}
+	fmt.Printf("Len(ranges) = %d, maxLen = %d", len(ranges), maxLen)
 	return ranges
 }

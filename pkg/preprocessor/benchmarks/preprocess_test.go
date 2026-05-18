@@ -12,6 +12,7 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/throwea/1brc-go/pkg/files"
 	"github.com/throwea/1brc-go/pkg/model"
 	m "github.com/throwea/1brc-go/pkg/model"
 	"github.com/throwea/1brc-go/pkg/utils"
@@ -428,5 +429,12 @@ func Benchmark_Plus(b *testing.B) { // 1.0 ns/op
 	}
 	if L == 0 {
 		b.Errorf("L not incremented")
+	}
+}
+
+// Full Dataset -> 3.224 seconds. 4mb gives the fastest runtime for chunk size
+func Benchmark_ChunkFileImproved(b *testing.B) {
+	for b.Loop() {
+		files.ChunkFileImproved("../../../../1brc-go/measurements.txt")
 	}
 }
