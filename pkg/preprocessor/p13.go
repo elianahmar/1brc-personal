@@ -25,19 +25,20 @@ func NewP13(path string) *P13 {
 
 func (p13 *P13) Compute() map[string]*model.MeasurementInt { // 12 seconds.
 
-	// Produce find the ranges first
+	// Produce the ranges first
 	ranges := files.ChunkFileImproved(p13.Path)
 	mChan := make(chan map[string]*model.MeasurementInt, len(ranges))
 	wg := sync.WaitGroup{}
+	file := utils.PanicE(os.Open(p13.Path))
 
 	wg.Add(len(ranges))
 	// Separate go routines for each range. Each go routine will build a map internally
 	// and push it to a channel of maps which are processed on main thread
 	for _, r := range ranges {
-		go func(r model.Range, mChan chan map[string]*model.MeasurementInt) {
+		go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File) {
 			defer wg.Done()
-			p13.processRange(r, mChan)
-		}(r, mChan)
+			p13.processRange(r, mChan, file)
+		}(r, mChan, file)
 	}
 	// Spawn another go routine which waits for all ranges to be processed and closes
 	// the channel so localMeasurement := range mChan can exit after it drains the channel
@@ -64,7 +65,7 @@ func (p13 *P13) Compute() map[string]*model.MeasurementInt { // 12 seconds.
 }
 
 // TODO: if this is slow don't tie this to the object
-func (p13 *P13) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt) {
+func (p13 *P13) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File) {
 	numByte := make([]byte, 0, 8) // TODO: Sync Pool this?
 	delim, period := byte(';'), byte('.')
 	L, N, temp := 0, 0, 0
@@ -88,10 +89,6 @@ func (p13 *P13) processRange(r model.Range, mChan chan map[string]*model.Measure
 		temp, _ = strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
 		return temp, delimIdx
 	}
-
-	// TODO: can I just pass a single ref to this file object
-	file := utils.PanicE(os.Open(p13.Path))
-	defer file.Close()
 
 	localMeasurement := make(map[string]*model.MeasurementInt, 512)
 	buff := make([]byte, r.End-r.Start+1)
