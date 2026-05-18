@@ -76,7 +76,6 @@ func ChunkFileImproved(path string) []model.Range {
 	if err != nil {
 		panic("no stat")
 	}
-	fmt.Printf("file size = %d\n", info.Size())
 	buffer := make([]byte, chunkSize)
 	fileSize := info.Size()
 	maxLen := fileSize / int64(chunkSize)

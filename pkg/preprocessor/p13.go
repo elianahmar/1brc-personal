@@ -2,7 +2,6 @@ package preprocessor
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"strconv"
 	"sync"
@@ -24,33 +23,34 @@ func NewP13(path string) *P13 {
 	}
 }
 
-func (p13 *P13) Compute() map[string]*model.MeasurementInt { // 44 seconds. I think I need to override some implementation
-
-	// Inlining this function to keep everything on the stack... Is this actually the case?
+func (p13 *P13) Compute() map[string]*model.MeasurementInt { // 12 seconds.
 
 	// Produce find the ranges first
 	ranges := files.ChunkFileImproved(p13.Path)
-	fmt.Println(ranges)
 	mChan := make(chan map[string]*model.MeasurementInt, len(ranges))
 	wg := sync.WaitGroup{}
 
 	wg.Add(len(ranges))
+	// Separate go routines for each range. Each go routine will build a map internally
+	// and push it to a channel of maps which are processed on main thread
 	for _, r := range ranges {
 		go func(r model.Range, mChan chan map[string]*model.MeasurementInt) {
 			defer wg.Done()
 			p13.processRange(r, mChan)
 		}(r, mChan)
 	}
+	// Spawn another go routine which waits for all ranges to be processed and closes
+	// the channel so localMeasurement := range mChan can exit after it drains the channel
 	go func() {
 		wg.Wait()
 		close(mChan)
 	}()
+
 	finalMeasure := make(map[string]*model.MeasurementInt, 512)
 	for localMeasurement := range mChan {
 		for city, newMeasure := range localMeasurement {
-			measurement, exists := finalMeasure[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
+			measurement, exists := finalMeasure[city]
 			if !exists {
-				// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
 				measurement = &model.MeasurementInt{City: city}
 				finalMeasure[city] = measurement
 			}
@@ -65,7 +65,7 @@ func (p13 *P13) Compute() map[string]*model.MeasurementInt { // 44 seconds. I th
 
 // TODO: if this is slow don't tie this to the object
 func (p13 *P13) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt) {
-	numByte := make([]byte, 0, 8) // Sync Pool this?
+	numByte := make([]byte, 0, 8) // TODO: Sync Pool this?
 	delim, period := byte(';'), byte('.')
 	L, N, temp := 0, 0, 0
 
@@ -89,6 +89,7 @@ func (p13 *P13) processRange(r model.Range, mChan chan map[string]*model.Measure
 		return temp, delimIdx
 	}
 
+	// TODO: can I just pass a single ref to this file object
 	file := utils.PanicE(os.Open(p13.Path))
 	defer file.Close()
 
