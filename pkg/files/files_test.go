@@ -11,9 +11,10 @@ func test_ChunkFile(t *testing.T) {
 }
 
 func Test_ChunkFileImproved(t *testing.T) {
-	ranges := ChunkFileImproved("../../testdata/test_file.txt")
+	path := "../../../1brc-go/small_measurements.txt"
+	ranges := ChunkFileImproved(path)
 	fmt.Println(ranges)
-	file, _ := os.Open("../../testdata/test_file.txt")
+	file, _ := os.Open(path)
 	for i, part := range ranges {
 		fmt.Printf("Buffer %d =========\n", i)
 
@@ -22,3 +23,9 @@ func Test_ChunkFileImproved(t *testing.T) {
 		fmt.Println(string(buff))
 	}
 }
+
+// func Test_ByteReading(t *testing.T) {
+// 	b := []byte("Baltimore;12.0\nNew York City;-1.0")
+// 	reader := bytes.NewReaderSize(b, 16)
+// 	reader.ReadBytes
+// }

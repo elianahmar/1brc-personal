@@ -84,7 +84,7 @@ func ChunkFileImproved(path string) []model.Range {
 	if remainder {
 		maxLen++
 	}
-	ranges := make([]Range, 0, maxLen)
+	ranges := make([]model.Range, 0, maxLen)
 	lastOffset := int64(0)
 	newline := byte('\n')
 	for {
@@ -97,7 +97,7 @@ func ChunkFileImproved(path string) []model.Range {
 		}
 		lastNewline := int64(bytes.LastIndexByte(buffer, newline))
 		ending := int64(lastOffset + lastNewline)
-		ranges = append(ranges, Range{Start: lastOffset, End: ending})
+		ranges = append(ranges, model.Range{Start: lastOffset, End: ending})
 		lastOffset = ending + 1
 	}
 	fmt.Printf("Len(ranges) = %d, maxLen = %d", len(ranges), maxLen)

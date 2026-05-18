@@ -1,9 +1,11 @@
 package preprocessor
 
 import (
-	"bufio"
+	"bytes"
+	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/files"
@@ -25,8 +27,46 @@ func NewP13(path string) *P13 {
 func (p13 *P13) Compute() map[string]*model.MeasurementInt { // 44 seconds. I think I need to override some implementation
 
 	// Inlining this function to keep everything on the stack... Is this actually the case?
-	numByte := make([]byte, 0, 8)
-	newline, delim, period := byte('\n'), byte(';'), byte('.')
+
+	// Produce find the ranges first
+	ranges := files.ChunkFileImproved(p13.Path)
+	fmt.Println(ranges)
+	mChan := make(chan map[string]*model.MeasurementInt, len(ranges))
+	wg := sync.WaitGroup{}
+
+	wg.Add(len(ranges))
+	for _, r := range ranges {
+		go func(r model.Range, mChan chan map[string]*model.MeasurementInt) {
+			defer wg.Done()
+			p13.processRange(r, mChan)
+		}(r, mChan)
+	}
+	go func() {
+		wg.Wait()
+		close(mChan)
+	}()
+	finalMeasure := make(map[string]*model.MeasurementInt, 512)
+	for localMeasurement := range mChan {
+		for city, newMeasure := range localMeasurement {
+			measurement, exists := finalMeasure[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
+			if !exists {
+				// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
+				measurement = &model.MeasurementInt{City: city}
+				finalMeasure[city] = measurement
+			}
+			measurement.Temps += newMeasure.Temps
+			measurement.Count += newMeasure.Count
+			measurement.Max = max(measurement.Max, newMeasure.Max)
+			measurement.Min = min(measurement.Min, newMeasure.Min)
+		}
+	}
+	return finalMeasure
+}
+
+// TODO: if this is slow don't tie this to the object
+func (p13 *P13) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt) {
+	numByte := make([]byte, 0, 8) // Sync Pool this?
+	delim, period := byte(';'), byte('.')
 	L, N, temp := 0, 0, 0
 
 	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
@@ -45,42 +85,38 @@ func (p13 *P13) Compute() map[string]*model.MeasurementInt { // 44 seconds. I th
 			}
 			L += 1
 		}
-		// NOTE: Just had this idea. Might be able to remove numByte and CityByte array
-		// entirely and just do unsafe string on the length and find the index of the ';' char
-		// In future attempts, might just be able to override scanner implementation. I think they expose the interfaces
 		temp, _ = strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
 		return temp, delimIdx
 	}
 
-	// Produce find the ranges first
-	ranges := files.ChunkFileImproved(p13.Path)
-	measureChan := make(chan map[string]*model.MeasurementInt, len(ranges))
-
-	for _, r := range ranges {
-		go processRange(r, measureChan)
-	}
-	// Brute force this. Read line by line and update a table
 	file := utils.PanicE(os.Open(p13.Path))
-	// defer file.Close() //NOTE: commenting this out saves a ~second
-	measurements := make(map[string]*model.MeasurementInt, 512) // 512 bc it's power of 2
-	fileScanner := bufio.NewReaderSize(file)
-	fileScanner.Buffer(make([]byte, 2*1024*1024), 1024*1024)
-	for _, subset := range measureChan {
-		line := fileScanner.Bytes() // NOTE: unsafe is no good here. Per the docs. The underlying array can be overwritten
-		temp, delimIdx := parse(line)
-		measurement, exists := measurements[unsafe.String(&line[0], delimIdx)] // Lookup trick. city underlying byte array can change but we can use it for lookup
+	defer file.Close()
+
+	localMeasurement := make(map[string]*model.MeasurementInt, 512)
+	buff := make([]byte, r.End-r.Start+1)
+	file.ReadAt(buff, r.Start)
+	start := 0
+	newline := byte('\n')
+	for start <= len(buff) {
+		buff = buff[start:]
+		nextNL := bytes.IndexByte(buff, newline)
+		if nextNL == -1 {
+			break
+		}
+
+		temp, delimIdx := parse(buff[:nextNL])
+		measurement, exists := localMeasurement[unsafe.String(&buff[0], delimIdx)] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
-			cityName := string(line[0:delimIdx])
+			cityName := string(buff[0:delimIdx])
 			measurement = &model.MeasurementInt{City: cityName}
-			measurements[cityName] = measurement
+			localMeasurement[cityName] = measurement
 		}
 		measurement.Temps += temp
 		measurement.Count += 1
 		measurement.Max = max(measurement.Max, temp)
 		measurement.Min = min(measurement.Min, temp)
+		start = nextNL + 1
 	}
-	return measurements
+	mChan <- localMeasurement
 }
-
-func (p13 *P13) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt)
