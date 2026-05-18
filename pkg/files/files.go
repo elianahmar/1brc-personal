@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/throwea/1brc-go/pkg/model"
 	u "github.com/throwea/1brc-go/pkg/utils"
 )
 
@@ -14,11 +15,6 @@ func CreateDir(dmy string) {
 	newDir := fmt.Sprintf("documentation/%s", dmy)
 	u.PanicE(os.ReadDir("documentation"))
 	u.PanicE(struct{}{}, os.MkdirAll(newDir, 0o755))
-}
-
-type Range struct {
-	Start int64
-	End   int64
 }
 
 //
@@ -72,7 +68,7 @@ func ChunkFile(path string) {
 	}
 }
 
-func ChunkFileImproved(path string) []Range {
+func ChunkFileImproved(path string) []model.Range {
 	file, _ := os.Open(path)
 
 	chunkSize := 4 * 1024 * 1024 // 4mb
