@@ -95,13 +95,15 @@ func (p14 *P14) processRange(r model.Range, mChan chan map[string]*model.Measure
 	newline := byte('\n')
 	for start <= len(buff) {
 		buff = buff[start:]
+		buffLen := len(buff)
 		nextNL := -1 // This is taking a lot of time
 		ptr := 0
-		for ptr < len(buff) {
+		for ptr < buffLen {
 			if buff[ptr] == newline {
 				nextNL = ptr
 				break
 			}
+			ptr++
 		}
 		if nextNL == -1 {
 			break
