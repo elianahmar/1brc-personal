@@ -99,6 +99,5 @@ func ChunkFileImproved(path string) []model.Range {
 		ranges = append(ranges, model.Range{Start: lastOffset, End: ending})
 		lastOffset = ending + 1
 	}
-	fmt.Printf("Len(ranges) = %d, maxLen = %d", len(ranges), maxLen)
 	return ranges
 }
