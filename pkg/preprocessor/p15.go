@@ -2,13 +2,11 @@ package preprocessor
 
 import (
 	"os"
-	"strconv"
 	"sync"
 	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/files"
 	"github.com/throwea/1brc-go/pkg/model"
-	"github.com/throwea/1brc-go/pkg/utils"
 )
 
 type P15 struct {
@@ -36,7 +34,6 @@ func (p15 *P15) Compute() map[string]*model.MeasurementInt { // 12 seconds.
 	for _, r := range ranges {
 		go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File) {
 			defer wg.Done()
-			utils.PanicIf(r.Start >= r.End, "bounds are wrong")
 			p15.processRange(r, mChan, file)
 		}(r, mChan, file)
 	}
@@ -66,59 +63,63 @@ func (p15 *P15) Compute() map[string]*model.MeasurementInt { // 12 seconds.
 
 // TODO: if this is slow don't tie this to the object
 func (p15 *P15) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File) {
-	numByte := make([]byte, 0, 8) // TODO: Sync Pool this?
-	delim, period := byte(';'), byte('.')
-	semiIndex, temp, iters, nxtLine := 0, 0, 0, 0
+	var (
+		delim                = byte(';')
+		zero, nine, negative = byte('0'), byte('9'), byte('-')
+		L, N, temp           = 0, 0, 0
+	)
+
+	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
+	parse := func(line []byte) (int, int) {
+		L, N = 0, len(line)
+		for line[L] != delim {
+			L += 1
+		}
+		delimIdx := L
+		L += 1
+		temp = 0
+		isNeg := line[L] == negative
+		for L < N {
+			nb := line[L]
+			isChar := zero <= nb && nb <= nine
+			if isChar {
+				temp *= 10
+				temp += int(nb - zero)
+			}
+			L++
+		}
+		if isNeg {
+			temp *= -1
+		}
+		return temp, delimIdx
+	}
 
 	localMeasurement := make(map[string]*model.MeasurementInt, 512)
-	buff := make([]byte, r.End-r.Start)
+	buff := make([]byte, r.End-r.Start+1)
 	file.ReadAt(buff, r.Start)
 	start := 0
 	newline := byte('\n')
-	for start < len(buff) {
-		// println(start)
+	for start <= len(buff) {
 		buff = buff[start:]
-		numByte = numByte[:0]
-
-		// Parse for city. I'm assuming boundaries are correct
+		buffLen := len(buff)
+		nextNL := -1 // This is taking a lot of time
 		ptr := 0
-		iters = 0
-		for buff[ptr] != delim {
-			ptr++
-			iters++
-			utils.PanicIf(iters > 64, "infinite looping city parsing")
-		}
-		city := unsafe.String(&buff[0], ptr)
-
-		// Parse the number
-		iters = 0
-		nxtLine = -1
-		semiIndex = ptr
-		ptr++
-		for ptr < len(buff) {
-			nb := buff[ptr]
-			if nb == newline {
-				nxtLine = ptr
+		for ptr < buffLen {
+			if buff[ptr] == newline {
+				nextNL = ptr
 				break
 			}
-			if nb != period {
-				numByte = append(numByte, nb)
-			}
 			ptr++
-			iters++
-			utils.PanicIf(iters > 24, "infinite looping, num parsing")
 		}
-
-		if nxtLine == -1 {
+		if nextNL == -1 {
 			break
 		}
 
-		temp, _ = strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
-
-		measurement, exists := localMeasurement[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
+		temp, delimIdx := parse(buff[:nextNL])
+		measurement, exists := localMeasurement[unsafe.String(&buff[0], delimIdx)] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
-			cityName := string(buff[:semiIndex])
+			cityName := string(buff[0:delimIdx])
 			measurement = &model.MeasurementInt{City: cityName}
 			localMeasurement[cityName] = measurement
 		}
@@ -126,7 +127,7 @@ func (p15 *P15) processRange(r model.Range, mChan chan map[string]*model.Measure
 		measurement.Count += 1
 		measurement.Max = max(measurement.Max, temp)
 		measurement.Min = min(measurement.Min, temp)
-		start = ptr + 1
+		start = nextNL + 1
 	}
 	mChan <- localMeasurement
 }
