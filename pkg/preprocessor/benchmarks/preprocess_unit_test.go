@@ -180,3 +180,21 @@ func numConvertor(numByte []byte) int {
 	}
 	return res
 }
+
+func Benchmark_BoundsWhile(b *testing.B) { // 263.9 ns/op
+	for b.Loop() {
+		L, N := 0, 1000
+		for L < N {
+			L++
+		}
+	}
+}
+
+func Benchmark_ForLoop(b *testing.B) { // 266.3
+	for b.Loop() {
+		N := 1000
+		for L := range N {
+			_ = L
+		}
+	}
+}
