@@ -438,3 +438,28 @@ func Benchmark_ChunkFileImproved(b *testing.B) {
 		files.ChunkFileImproved("../../../../1brc-go/measurements.txt")
 	}
 }
+
+// This is a win
+func Benchmark_ManualNumberParsing(b *testing.B) { // 3.771 ns / op
+	num := []byte("-10.5")
+	for b.Loop() {
+		numConvertor(num)
+	}
+}
+
+func Benchmark_StrConv(b *testing.B) { // 4.178 ns / op
+	num := []byte("-10.5")
+	L, N := 0, len(num)
+	period := byte('.')
+	numByte := make([]byte, 0, 8)
+	for b.Loop() {
+		for L < N {
+			nb := num[L]
+			if nb != period {
+				numByte = append(numByte, nb)
+			}
+			L += 1
+		}
+		strconv.Atoi(unsafe.String(&numByte[0], len(numByte)))
+	}
+}

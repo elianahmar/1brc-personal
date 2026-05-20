@@ -165,18 +165,16 @@ func Test_ParseNumNoConv(t *testing.T) {
 // TODO: Benchmark this
 func numConvertor(numByte []byte) int {
 	res := 0
-	// println("len(numbyte) = ", len(numByte))
-	println("numByte = ", string(numByte))
+	zero, nine, negative := byte('0'), byte('9'), byte('-')
 	for _, char := range numByte {
-		isDig := char >= '0' && char <= '9' // Fastest way I could find to tell if byte is digit. Use ascii comparison. No rune conversion
+		isDig := char >= zero && char <= nine // Fastest way I could find to tell if byte is digit. Use ascii comparison. No rune conversion
 		if !isDig {
 			continue
 		}
-		println("char = ", char)
 		res *= 10
-		res += int(char - '0')
+		res += int(char - zero)
 	}
-	isNeg := numByte[0] == '-'
+	isNeg := numByte[0] == negative
 	if isNeg {
 		return -1 * res
 	}
