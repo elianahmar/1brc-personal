@@ -2,6 +2,7 @@ package preprocessor
 
 import (
 	"os"
+	"time"
 	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/files"
@@ -19,7 +20,7 @@ func NewP16(path string) *P16 {
 	}
 }
 
-func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 12 seconds.
+func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
 
 	// Produce the ranges first
 	rChan := make(chan model.Range, 3290)
@@ -47,6 +48,7 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 12 seconds.
 		// BUG:Hack solution, ChunkFileAsync can push the total number of ranges to a chan
 		// In the main thread, I can count if we have received all ranges and push true to rSig
 		// Process Range knows how many times
+		time.Sleep(500 * time.Millisecond) // BUG: This fixes it but I don't want this solution
 		rSig <- true
 	}(mChan, file)
 	// Spawn another go routine which waits for all ranges to be processed and closes
@@ -66,7 +68,6 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 12 seconds.
 		//PERF: I can create a separate channel which will block until it receives a value... Easy
 		//
 		//rChan -> mChan -> main
-		// time.Sleep(2 * time.Second)
 		<-rSig
 		close(mChan)
 	}(rSig)
