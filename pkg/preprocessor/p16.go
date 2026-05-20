@@ -2,7 +2,7 @@ package preprocessor
 
 import (
 	"os"
-	"time"
+	"sync"
 	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/files"
@@ -23,23 +23,26 @@ func NewP16(path string) *P16 {
 func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
 
 	// Produce the ranges first
-	rChan := make(chan model.Range, 3290)
+	rChan := make(chan model.Range, 1000)
 	rSig := make(chan bool)                                    // This will be used to signal that we can close the measurement channel
-	mChan := make(chan map[string]*model.MeasurementInt, 3290) // Kinda cheating but I know I'll have 3290 ranges
+	mChan := make(chan map[string]*model.MeasurementInt, 1000) // Kinda cheating but I know I'll have 3290 ranges
 	file, _ := os.Open(p16.Path)
 
 	go files.ChunkFileAsync(p16.Path, rChan)
 	// Separate go routines for each range. Each go routine will build a map internally
 	// and push it to a channel of maps which are processed on main thread
 	go func(mChan chan map[string]*model.MeasurementInt, file *os.File) {
+		wg := &sync.WaitGroup{}
 		// i := 0
 		for r := range rChan { // We are receiving all of the ranges. I validated with prints. saw 3290
 			// i++
 			// println(i)
-			go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File) {
-				p16.processRange(r, mChan, file)
-			}(r, mChan, file)
+			wg.Add(1)
+			go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
+				p16.processRange(r, mChan, file, wg)
+			}(r, mChan, file, wg)
 		}
+		wg.Wait()
 		// BUG: I see the issue I think. We receive all of the ranges and spawn go routines
 		// To process them, but we aren't actually done, until all of those go routines complete
 		// I could cheat since I know we have to process 3290. But I want to implement this with the assumption that
@@ -48,7 +51,8 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
 		// BUG:Hack solution, ChunkFileAsync can push the total number of ranges to a chan
 		// In the main thread, I can count if we have received all ranges and push true to rSig
 		// Process Range knows how many times
-		time.Sleep(500 * time.Millisecond) // BUG: This fixes it but I don't want this solution
+		//
+		// NOTE: fix was simple. just add to waitgroup on every receive from rChan...
 		rSig <- true
 	}(mChan, file)
 	// Spawn another go routine which waits for all ranges to be processed and closes
@@ -92,12 +96,13 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
 }
 
 // TODO: if this is slow don't tie this to the object
-func (p16 *P16) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File) {
+func (p16 *P16) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
 	var (
 		delim                = byte(';')
 		zero, nine, negative = byte('0'), byte('9'), byte('-')
 		L, N, temp           = 0, 0, 0
 	)
+	defer wg.Done()
 
 	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
 	parse := func(line []byte) (int, int) {
