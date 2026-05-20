@@ -36,18 +36,23 @@ func ComputeAvg(measurements map[string]*model.Measurement) {
 // NOTE: If temps is positive let's ceil the Temps/Avg, else floor it
 func ComputeAvgStrConv(measurements map[string]*model.MeasurementInt) map[string]*model.Predicted {
 	predictions := make(map[string]*model.Predicted)
-	fmt.Println(printFullMeasurements(measurements))
+	// fmt.Println(printFullMeasurements(measurements))
 	for city, measurement := range measurements {
 		// NOTE: for final answers that have 0 as significand. I need to prepend zero to that result
-		avg := int(float64(measurement.Temps) / float64(measurement.Count))
+		avg := float64(measurement.Temps) / float64(measurement.Count) / 10.0
 		predictions[city] = &model.Predicted{
 			City: city,
 			Min:  convertToStr(measurement.Min),
 			Max:  convertToStr(measurement.Max),
-			Avg:  convertToStr(avg),
+			Avg:  convertToStrImproved(avg),
 		}
 	}
 	return predictions
+}
+
+// TODO: unit test...
+func convertToStrImproved(num float64) string {
+	return fmt.Sprintf("%.1f", num)
 }
 
 func convertToStr(num int) string {

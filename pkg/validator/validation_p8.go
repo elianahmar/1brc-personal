@@ -4,7 +4,9 @@ package validator
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/throwea/1brc-go/pkg/model"
@@ -35,17 +37,20 @@ func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 	utils.PanicE(struct{}{}, json.Unmarshal(content, &validation))
 	errs := make([]error, 0)
 
-	for city, temps := range validation { // NOTE: don't think this is right?
+	cities := slices.Sorted(maps.Keys(validation))
+
+	for _, city := range cities { // NOTE: don't think this is right?
+		temps := validation[city]
 		actual := getActual(temps.(string), city)
 
 		predicted, exists := measurements[city]
 		if !exists {
 			errs = append(errs, fmt.Errorf("%s data not found", city))
+			citiesFailed += 1
 			continue
 		}
 
-		err, minMiss, maxMiss, avgMiss := compare(predicted, actual)
-		errs = append(errs, err...)
+		errs, minMiss, maxMiss, avgMiss := compare(predicted, actual)
 
 		totalMinMisses += minMiss
 		totalMaxMisses += maxMiss

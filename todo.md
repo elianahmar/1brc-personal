@@ -3,9 +3,13 @@
   - Benchmark the file reading
   - Decompose the different parts down in the benchmark so I can compare performance
 - Have final validation being written as a json object. So I can jq over it
-- Fix the under by .1 issue. Thinking it's an issue with truncating
 - Aim for under <3 seconds
 - Gonna need block/mutex profiling if I wanna dig deeper
+- Get single pass parsing working
+  - Write a single range to a file and see what the data looks like
+- Figure out why "Flores, Peten" is not found?
+  - For this, make a unit which reads the whole file
+  - Parses every line and panics if we have a city Title "Flores, Peten". Copy it from terminal since it's a special character
 
 ### Constraints
 - Can only use std library packages
@@ -32,3 +36,4 @@
 - Add unit tests for the simple parser. I don't think it's working quite right
 - Convert floating point to ints and do conversion once at the end
 - Aim for under <10 seconds
+- Fix the under by .1 issue. Thinking it's an issue with truncating. Used "%.1f". with formatting.
