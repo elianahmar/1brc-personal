@@ -147,5 +147,13 @@ func runImplementation(impl, path string, chansize *int) {
 		fmt.Println("Computed the averages. Time to validate")
 		validator.ValidateCorrectnessInt(predictions)
 
+	case "p15":
+		fmt.Println("Read the file and processed the lines")
+		p15 := pre.NewP15(path)
+		measurements := p15.Compute()
+		predictions := compute.ComputeAvgStrConv(measurements)
+		fmt.Println("Computed the averages. Time to validate")
+		validator.ValidateCorrectnessInt(predictions)
+
 	}
 }

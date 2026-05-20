@@ -108,3 +108,93 @@ func Test_FindDelimIdx(t *testing.T) {
 		t.Errorf("temp is not correct; expected: 120, actual: %d", temp)
 	}
 }
+
+func Test_ParseNumNoConv(t *testing.T) {
+	testCases := []struct {
+		input    []byte
+		desc     string
+		expected int
+	}{
+		{
+			desc:     "expecting 1.0",
+			expected: 10,
+			input:    []byte("1.0"),
+		},
+		{
+			desc:     "expecting -13.5",
+			expected: -135,
+			input:    []byte("-13.5"),
+		},
+		{
+			desc:     "expecting 10.5",
+			expected: 105,
+			input:    []byte("10.5"),
+		},
+		{
+			desc:     "expecting -1.5",
+			expected: -15,
+			input:    []byte("-1.5"),
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			value := numConvertor(tC.input)
+			println("\n", value)
+			if value != tC.expected {
+				t.Errorf("expected = %d, actual = %d", tC.expected, value)
+			}
+		})
+	}
+}
+
+// -12.0
+// - skips
+// 1 -> 1 * 10 + 1 == 11
+// 2 -> 11 * 10 + 2 == 11
+//
+// temp = 0
+// 1 -> 0 * 10 + 1 = 1
+// 2 -> 1 * 10 + 2 = 12
+// 0 -> 12 * 10 + 0 = 120
+// NOTE:
+// We are converting the ascii digit byte into an integer
+// However, we can't just cast byte of number to int.
+// Because '0' -> '9' have int values 48 - 57
+// So I have to take int(char - '0') which internally
+// Gives me the correct numeric conversion
+// TODO: Benchmark this
+func numConvertor(numByte []byte) int {
+	res := 0
+	zero, nine, negative := byte('0'), byte('9'), byte('-')
+	for _, char := range numByte {
+		isDig := char >= zero && char <= nine // Fastest way I could find to tell if byte is digit. Use ascii comparison. No rune conversion
+		if !isDig {
+			continue
+		}
+		res *= 10
+		res += int(char - zero)
+	}
+	isNeg := numByte[0] == negative
+	if isNeg {
+		return -1 * res
+	}
+	return res
+}
+
+func Benchmark_BoundsWhile(b *testing.B) { // 263.9 ns/op
+	for b.Loop() {
+		L, N := 0, 1000
+		for L < N {
+			L++
+		}
+	}
+}
+
+func Benchmark_ForLoop(b *testing.B) { // 266.3
+	for b.Loop() {
+		N := 1000
+		for L := range N {
+			_ = L
+		}
+	}
+}
