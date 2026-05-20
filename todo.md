@@ -11,6 +11,7 @@
   - For this, make a unit which reads the whole file
   - Parses every line and panics if we have a city Title "Flores, Peten". Copy it from terminal since it's a special character
 - hyper parameter tuning script + config so I can get best performance
+  - Just create a json file. With each configurable option
 
 ### Constraints
 - Can only use std library packages
