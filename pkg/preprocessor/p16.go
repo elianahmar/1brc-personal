@@ -20,12 +20,11 @@ func NewP16(path string) *P16 {
 	}
 }
 
-func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
+func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
 
-	// Produce the ranges first
-	rChan := make(chan model.Range, 1000)
-	rSig := make(chan bool)                                    // This will be used to signal that we can close the measurement channel
-	mChan := make(chan map[string]*model.MeasurementInt, 1000) // Kinda cheating but I know I'll have 3290 ranges
+	rChan := make(chan model.Range, 1000) // TODO: make this configurable
+	rSig := make(chan bool)
+	mChan := make(chan map[string]*model.MeasurementInt, 1000)
 	file, _ := os.Open(p16.Path)
 
 	go files.ChunkFileAsync(p16.Path, rChan)
@@ -33,16 +32,12 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
 	// and push it to a channel of maps which are processed on main thread
 	go func(mChan chan map[string]*model.MeasurementInt, file *os.File) {
 		wg := &sync.WaitGroup{}
-		// i := 0
 		for r := range rChan { // We are receiving all of the ranges. I validated with prints. saw 3290
-			// i++
-			// println(i)
 			wg.Add(1)
 			go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
 				p16.processRange(r, mChan, file, wg)
 			}(r, mChan, file, wg)
 		}
-		wg.Wait()
 		// BUG: I see the issue I think. We receive all of the ranges and spawn go routines
 		// To process them, but we aren't actually done, until all of those go routines complete
 		// I could cheat since I know we have to process 3290. But I want to implement this with the assumption that
@@ -53,6 +48,7 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
 		// Process Range knows how many times
 		//
 		// NOTE: fix was simple. just add to waitgroup on every receive from rChan...
+		wg.Wait()
 		rSig <- true
 	}(mChan, file)
 	// Spawn another go routine which waits for all ranges to be processed and closes
@@ -77,14 +73,14 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
 	}(rSig)
 
 	finalMeasure := make(map[string]*model.MeasurementInt, 512)
-	cnt := 0
 	for localMeasurement := range mChan {
-		cnt++
 		for city, newMeasure := range localMeasurement {
 			measurement, exists := finalMeasure[city]
+			// IDEA: could we avoid allocating a new object if !exists and just assign
 			if !exists {
-				measurement = &model.MeasurementInt{City: city}
+				measurement = newMeasure
 				finalMeasure[city] = measurement
+				continue
 			}
 			measurement.Temps += newMeasure.Temps
 			measurement.Count += newMeasure.Count
@@ -95,7 +91,6 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 5.5 seconds.
 	return finalMeasure
 }
 
-// TODO: if this is slow don't tie this to the object
 func (p16 *P16) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
 	var (
 		delim                = byte(';')
@@ -108,10 +103,10 @@ func (p16 *P16) processRange(r model.Range, mChan chan map[string]*model.Measure
 	parse := func(line []byte) (int, int) {
 		L, N = 0, len(line)
 		for line[L] != delim {
-			L++ // 1.33 s for L += 1, 870ms for ++???
+			L++
 		}
 		delimIdx := L
-		L++ // 160ms for L += 1, 60ms for ++???
+		L++
 		temp = 0
 		isNeg := line[L] == negative
 		for L < N {
@@ -135,7 +130,7 @@ func (p16 *P16) processRange(r model.Range, mChan chan map[string]*model.Measure
 	for start <= len(buff) {
 		buff = buff[start:]
 		buffLen := len(buff)
-		nextNL := -1 // This is taking a lot of time
+		nextNL := -1
 		ptr := 0
 		for ptr < buffLen {
 			if buff[ptr] == newline {
