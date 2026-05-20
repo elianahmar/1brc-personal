@@ -72,15 +72,15 @@ func validateNumbers(predicted *model.Measurement, parsedMin, parsedAvg, parsedM
 	minMiss, maxMiss, avgMiss := 0, 0, 0
 	if predicted.Min != parsedMin {
 		minMiss += 1
-		errs = append(errs, fmt.Errorf("predicted Min = %2f, actual = %2f, city = %v", predicted.Min, parsedMin, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Min = %.1f, actual = %.1f, city = %v", predicted.Min, parsedMin, predicted.City))
 	}
 	if predicted.Avg != parsedAvg {
 		maxMiss += 1
-		errs = append(errs, fmt.Errorf("predicted Avg = %2f, actual = %2f, city = %v", predicted.Avg, parsedAvg, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Avg = %.1f, actual = %.1f, city = %v", predicted.Avg, parsedAvg, predicted.City))
 	}
 	if predicted.Max != parsedMax {
 		avgMiss += 1
-		errs = append(errs, fmt.Errorf("predicted Max = %2f, actual = %2f, city = %v", predicted.Max, parsedMax, predicted.City))
+		errs = append(errs, fmt.Errorf("predicted Max = %.1f, actual = %.1f, city = %v", predicted.Max, parsedMax, predicted.City))
 	}
 	return errs, minMiss, maxMiss, avgMiss
 }
