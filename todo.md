@@ -13,6 +13,7 @@
 - hyper parameter tuning script + config so I can get best performance
   - Just create a json file. With each configurable option
 - On main thread I can spawn a go routine which just waits for recover and writes the file if we notice a panic that happened in one of the go routines
+=======
 
 ### Constraints
 - Can only use std library packages
