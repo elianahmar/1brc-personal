@@ -4,7 +4,8 @@
   - Decompose the different parts down in the benchmark so I can compare performance
 - Have final validation being written as a json object. So I can jq over it
 - Fix the under by .1 issue. Thinking it's an issue with truncating
-- Aim for under <10 seconds
+- Aim for under <3 seconds
+- Gonna need block/mutex profiling if I wanna dig deeper
 
 ### Constraints
 - Can only use std library packages
@@ -30,3 +31,4 @@
 - Benchmark bufio.Reader versus scanner (using ReadSlice('\n')) -> DONE
 - Add unit tests for the simple parser. I don't think it's working quite right
 - Convert floating point to ints and do conversion once at the end
+- Aim for under <10 seconds

@@ -68,6 +68,8 @@ func ChunkFile(path string) {
 	}
 }
 
+// IDEA: what if I read the chunks and pushed each chunk to a buffered channel.
+// Then, I would need to do all of this upfront
 func ChunkFileImproved(path string) []model.Range {
 	file, _ := os.Open(path)
 
@@ -99,5 +101,40 @@ func ChunkFileImproved(path string) []model.Range {
 		ranges = append(ranges, model.Range{Start: lastOffset, End: ending})
 		lastOffset = ending + 1
 	}
+	return ranges
+}
+
+func ChunkFileAsync(path string, rangeChan chan model.Range) []model.Range {
+	file, _ := os.Open(path)
+
+	chunkSize := 4 * 1024 * 1024 // 4mb
+	info, err := file.Stat()
+	if err != nil {
+		panic("no stat")
+	}
+	buffer := make([]byte, chunkSize)
+	fileSize := info.Size()
+	maxLen := fileSize / int64(chunkSize)
+	remainder := fileSize%int64(chunkSize) > 0
+	if remainder {
+		maxLen++
+	}
+	ranges := make([]model.Range, 0, maxLen)
+	lastOffset := int64(0)
+	newline := byte('\n')
+	for {
+		bytesRead, err := file.ReadAt(buffer, lastOffset)
+		if err != nil && err != io.EOF {
+			panic("Error reading the file")
+		}
+		if bytesRead == 0 {
+			break
+		}
+		lastNewline := int64(bytes.LastIndexByte(buffer, newline))
+		ending := int64(lastOffset + lastNewline)
+		rangeChan <- model.Range{Start: lastOffset, End: ending}
+		lastOffset = ending + 1
+	}
+	close(rangeChan)
 	return ranges
 }
