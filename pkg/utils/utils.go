@@ -47,3 +47,11 @@ func DayMonthYear() string {
 func BytesToString(b []byte) string {
 	return unsafe.String(&b[0], len(b))
 }
+
+func PrintMap[T comparable, E any](m map[T]E) {
+	println("\n++++++ PRINTING MAP CONTENTS ++++++\n")
+	for k, v := range m {
+		println("key = ", k, "value = ", v)
+	}
+	println("\n++++++ PRINTING MAP CONTENTS ++++++\n")
+}
