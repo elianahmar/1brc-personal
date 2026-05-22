@@ -60,7 +60,7 @@ func convertToStr(num int) string {
 	numStr := strconv.Itoa(num)
 	N := len(numStr)
 
-	utils.PanicIf(N > 5, "") // Temp should never exceed 5 bytes (ex. -45.4)
+	utils.PanicIf(N > 5, "", nil) // Temp should never exceed 5 bytes (ex. -45.4)
 	for i := range N {
 		if i == N-1 {
 			res.WriteByte('.')

@@ -123,21 +123,28 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 	defer wg.Done()
 
 	localMeasurement := make(map[string]*model.MeasurementInt, 512)
-	ptr := 0
 	buff := make([]byte, r.End-r.Start+1)
 	file.ReadAt(buff, r.Start)
 
-	utils.PanicIf(buff[0] == byte('\n'), "not starting at new line")
-	utils.PanicIf(buff[len(buff)-1] == byte('\n'), "not ending at new line")
+	utils.PanicIf(buff[0] == byte('\n'), fmt.Sprintf("not starting at new line, chunk number = %d", r.Index), nil)
+	if buff[len(buff)-1] != byte('\n') {
+		readRange(r, p17.Path)
+		panic(fmt.Sprintf("not ending at new line, chunk number = %d", r.Index))
+	}
+
+	// NOTE: Based on these asserts I can guarantee we are creating the chunks correctly
+	// So if every buffer starts at a character and ends with a newline, then we should be checking every index up to the end
+	// So if we have 10 bytes in the buffer then our pointer needs to [0, 9]
 
 	N, start := len(buff), 0
-	for ptr <= N {
+	ptr := 0
+	for ptr < N {
 		start = ptr
 		temp, city, nlIdx, dlIdx, nlFound := ParseLine(ptr, buff, N)
 		if !nlFound {
 			break
 		}
-		ptr = nlIdx
+		ptr = nlIdx + 1
 
 		// fmt.Println(fmt.Sprintf("%s, [%d, %d]", city, start, dlIdx))
 		measurement, exists := localMeasurement[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
@@ -165,7 +172,7 @@ func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
 	)
 
 	ptr := start
-	utils.PanicIf(buff[start] == newline, "should not be starting a newline")
+	utils.PanicIf(buff[start] == newline, "should not be starting a newline", nil)
 	for ptr <= N {
 		if buff[ptr] == delim {
 			delimIdx = ptr - 1

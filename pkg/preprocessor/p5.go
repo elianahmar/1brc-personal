@@ -35,7 +35,7 @@ func (p5 *P5) Compute() map[string]*model.Measurement { // 56 seconds. Fastest y
 		// process the line itself
 		city, num, found := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
 		cityLookup := utils.BytesToString(city)
-		utils.PanicIf(!found, "bytes not found?")
+		utils.PanicIf(!found, "bytes not found?", nil)
 		temp := utils.PanicE(strconv.ParseFloat(string(num), 64))
 		measurement, exists := measurements[cityLookup] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
