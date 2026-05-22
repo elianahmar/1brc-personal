@@ -18,9 +18,12 @@ func PanicE[T any](obj T, err error) T {
 	return obj
 }
 
-func PanicIf(cond bool, msg string) {
+func PanicIf(cond bool, msg string, fn func()) {
 	if cond {
 		panic(msg + "\n")
+	}
+	if fn != nil {
+		fn()
 	}
 }
 
