@@ -3,7 +3,6 @@ package preprocessor
 import (
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"unsafe"
 
@@ -125,7 +124,7 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 
 	localMeasurement := make(map[string]*model.MeasurementInt, 512)
 	ptr := 0
-	buff := make([]byte, r.End-r.Start+1)
+	buff := make([]byte, r.End-r.Start)
 	file.ReadAt(buff, r.Start)
 	N, start := len(buff), 0
 	for ptr < N {
@@ -187,8 +186,6 @@ func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
 	}
 	ptr++                                               // So that we move past the newline break
 	city := unsafe.String(&buff[start], delimIdx-start) // BUG: This is printing the full line
-	utils.PanicIf(delimIdx-start <= 0, "indexes are off")
-	utils.PanicIf(strings.ContainsRune(city, rune(';')), city+"contains delimeter")
 	if isNeg {
 		temp *= -1
 	}
