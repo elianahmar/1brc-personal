@@ -20,7 +20,7 @@ func PanicE[T any](obj T, err error) T {
 
 func PanicIf(cond bool, msg string) {
 	if cond {
-		panic(msg)
+		panic(msg + "\n")
 	}
 }
 
@@ -50,6 +50,7 @@ func BytesToString(b []byte) string {
 
 func PrintMap[T comparable, E any](m map[T]E) {
 	println("\n++++++ PRINTING MAP CONTENTS ++++++\n")
+
 	for k, v := range m {
 		println("key = ", k, "value = ", v)
 	}

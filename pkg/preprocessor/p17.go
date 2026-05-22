@@ -1,33 +1,62 @@
 package preprocessor
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/files"
 	"github.com/throwea/1brc-go/pkg/model"
+	"github.com/throwea/1brc-go/pkg/utils"
 )
 
-type P16 struct {
+type P17 struct {
 	Path     string
 	ChanSize int
 }
 
-func NewP16(path string) *P16 {
-	return &P16{
+func NewP17(path string) *P17 {
+	return &P17{
 		Path: path,
 	}
 }
 
-func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
+// WARN: the range isn't inclusive... that's why + 1 is needed on the buffer
+// Also, the very last line always includes a newline break
+// So for a single pass parse, I need to scan the whole line and if their are no more bytes
+// Just break.
+func readRange(r model.Range, path string) {
+	input := utils.PanicE(os.Open(path))
+	defer input.Close()
+	buff := make([]byte, r.End-r.Start+1)
+	input.ReadAt(buff, r.Start)
+
+	newFilePath := "./firstrange.txt"
+	newFile, err := os.Create(newFilePath)
+	if err != nil {
+		panic("Failed to create file: " + err.Error())
+	}
+	defer newFile.Close()
+
+	length, err := newFile.Write(buff)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("File name: %s\n", newFile.Name())
+	fmt.Printf("File length: %d bytes\n", length)
+	return
+}
+
+func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
 
 	rChan := make(chan model.Range, 1000) // TODO: make this configurable
 	rSig := make(chan bool)
 	mChan := make(chan map[string]*model.MeasurementInt, 1000)
-	file, _ := os.Open(p16.Path)
+	file, _ := os.Open(p17.Path)
 
-	go files.ChunkFileAsync(p16.Path, rChan)
+	go files.ChunkFileAsync(p17.Path, rChan)
 	// Separate go routines for each range. Each go routine will build a map internally
 	// and push it to a channel of maps which are processed on main thread
 	go func(mChan chan map[string]*model.MeasurementInt, file *os.File) {
@@ -35,7 +64,7 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
 		for r := range rChan { // We are receiving all of the ranges. I validated with prints. saw 3290
 			wg.Add(1)
 			go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
-				p16.processRange(r, mChan, file, wg)
+				p17.processRange(r, mChan, file, wg)
 			}(r, mChan, file, wg)
 		}
 		// BUG: I see the issue I think. We receive all of the ranges and spawn go routines
@@ -91,63 +120,27 @@ func (p16 *P16) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
 	return finalMeasure
 }
 
-func (p16 *P16) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
-	var (
-		delim                = byte(';')
-		zero, nine, negative = byte('0'), byte('9'), byte('-')
-		L, N, temp           = 0, 0, 0
-	)
+func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	// NOTE: Inlining the function doesn't improve speed. I think compiler is probably doing it for me
-	parse := func(line []byte) (int, int) {
-		L, N = 0, len(line)
-		for line[L] != delim {
-			L++
-		}
-		delimIdx := L
-		L++
-		temp = 0
-		isNeg := line[L] == negative
-		for L < N {
-			nb := line[L]
-			if zero <= nb && nb <= nine {
-				temp = (temp * 10) + int(nb-zero)
-			}
-			L++
-		}
-		if isNeg {
-			temp *= -1
-		}
-		return temp, delimIdx
-	}
-
 	localMeasurement := make(map[string]*model.MeasurementInt, 512)
+	ptr := 0
 	buff := make([]byte, r.End-r.Start+1)
 	file.ReadAt(buff, r.Start)
-	start := 0
-	newline := byte('\n')
-	for start <= len(buff) {
-		buff = buff[start:]
-		buffLen := len(buff)
-		nextNL := -1
-		ptr := 0
-		for ptr < buffLen {
-			if buff[ptr] == newline {
-				nextNL = ptr
-				break
-			}
-			ptr++
-		}
-		if nextNL == -1 {
+	N, start := len(buff), 0
+	for ptr < N {
+		start = ptr
+		temp, city, nlIdx, dlIdx, nlFound := ParseLine(ptr, buff, N)
+		if !nlFound {
 			break
 		}
+		ptr = nlIdx
 
-		temp, delimIdx := parse(buff[:nextNL])
-		measurement, exists := localMeasurement[unsafe.String(&buff[0], delimIdx)] // Lookup trick. city underlying byte array can change but we can use it for lookup
+		// fmt.Println(fmt.Sprintf("%s, [%d, %d]", city, start, dlIdx))
+		measurement, exists := localMeasurement[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
 		if !exists {
 			// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
-			cityName := string(buff[0:delimIdx])
+			cityName := string(buff[start:dlIdx])
 			measurement = &model.MeasurementInt{City: cityName}
 			localMeasurement[cityName] = measurement
 		}
@@ -155,7 +148,49 @@ func (p16 *P16) processRange(r model.Range, mChan chan map[string]*model.Measure
 		measurement.Count += 1
 		measurement.Max = max(measurement.Max, temp)
 		measurement.Min = min(measurement.Min, temp)
-		start = nextNL + 1
 	}
 	mChan <- localMeasurement
+}
+
+func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
+	var (
+		delim                = byte(';')
+		newline              = byte('\n')
+		zero, nine, negative = byte('0'), byte('9'), byte('-')
+		temp, delimIdx       = 0, 0
+		newLineFound         = false
+	)
+
+	ptr := start
+	utils.PanicIf(buff[start] == newline, "should not be starting a newline")
+	for ptr < N {
+		if buff[ptr] == delim {
+			delimIdx = ptr - 1
+			break
+		}
+		ptr++
+	}
+
+	ptr++ // move past the ';'
+	temp = 0
+	isNeg := buff[ptr] == negative
+	for ptr < N {
+		nb := buff[ptr]
+		if nb == newline {
+			newLineFound = true
+			break
+		}
+		if zero <= nb && nb <= nine {
+			temp = (temp * 10) + int(nb-zero)
+		}
+		ptr++
+	}
+	ptr++                                               // So that we move past the newline break
+	city := unsafe.String(&buff[start], delimIdx-start) // BUG: This is printing the full line
+	utils.PanicIf(delimIdx-start <= 0, "indexes are off")
+	utils.PanicIf(strings.ContainsRune(city, rune(';')), city+"contains delimeter")
+	if isNeg {
+		temp *= -1
+	}
+	return temp, city, ptr, delimIdx, newLineFound
 }
