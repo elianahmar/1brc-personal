@@ -124,10 +124,14 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 
 	localMeasurement := make(map[string]*model.MeasurementInt, 512)
 	ptr := 0
-	buff := make([]byte, r.End-r.Start)
+	buff := make([]byte, r.End-r.Start+1)
 	file.ReadAt(buff, r.Start)
+
+	utils.PanicIf(buff[0] == byte('\n'), "not starting at new line")
+	utils.PanicIf(buff[len(buff)-1] == byte('\n'), "not ending at new line")
+
 	N, start := len(buff), 0
-	for ptr < N {
+	for ptr <= N {
 		start = ptr
 		temp, city, nlIdx, dlIdx, nlFound := ParseLine(ptr, buff, N)
 		if !nlFound {
@@ -162,7 +166,7 @@ func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
 
 	ptr := start
 	utils.PanicIf(buff[start] == newline, "should not be starting a newline")
-	for ptr < N {
+	for ptr <= N {
 		if buff[ptr] == delim {
 			delimIdx = ptr - 1
 			break
@@ -173,7 +177,7 @@ func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
 	ptr++ // move past the ';'
 	temp = 0
 	isNeg := buff[ptr] == negative
-	for ptr < N {
+	for ptr <= N {
 		nb := buff[ptr]
 		if nb == newline {
 			newLineFound = true

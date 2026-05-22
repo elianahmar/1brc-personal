@@ -75,4 +75,5 @@ type Line struct {
 type Range struct {
 	Start int64
 	End   int64
+	Index int
 }

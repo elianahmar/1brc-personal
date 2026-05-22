@@ -6,12 +6,13 @@
 - Aim for under <3 seconds
 - Gonna need block/mutex profiling if I wanna dig deeper
 - Get single pass parsing working
-  - Write a single range to a file and see what the data looks like
+  - Write a single range to a file and see what the data looks like. Done.
 - Figure out why "Flores, Peten" is not found?
   - For this, make a unit which reads the whole file
   - Parses every line and panics if we have a city Title "Flores, Peten". Copy it from terminal since it's a special character
 - hyper parameter tuning script + config so I can get best performance
   - Just create a json file. With each configurable option
+- On main thread I can spawn a go routine which just waits for recover and writes the file if we notice a panic that happened in one of the go routines
 
 ### Constraints
 - Can only use std library packages

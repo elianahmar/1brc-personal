@@ -122,7 +122,7 @@ func ChunkFileAsync(path string, rangeChan chan model.Range) []model.Range {
 	ranges := make([]model.Range, 0, maxLen)
 	lastOffset := int64(0)
 	newline := byte('\n')
-	for {
+	for i := 0; ; i++ {
 		bytesRead, err := file.ReadAt(buffer, lastOffset)
 		if err != nil && err != io.EOF {
 			panic("Error reading the file")
@@ -132,7 +132,7 @@ func ChunkFileAsync(path string, rangeChan chan model.Range) []model.Range {
 		}
 		lastNewline := int64(bytes.LastIndexByte(buffer, newline))
 		ending := int64(lastOffset + lastNewline)
-		rangeChan <- model.Range{Start: lastOffset, End: ending}
+		rangeChan <- model.Range{Start: lastOffset, End: ending, Index: i}
 		lastOffset = ending + 1
 	}
 	close(rangeChan)
