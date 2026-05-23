@@ -26,13 +26,13 @@ func NewP17(path string) *P17 {
 // Also, the very last line always includes a newline break
 // So for a single pass parse, I need to scan the whole line and if their are no more bytes
 // Just break.
-func readRange(r model.Range, path string) {
+func readRange(r model.Range, path string, writeFile string) {
 	input := utils.PanicE(os.Open(path))
 	defer input.Close()
 	buff := make([]byte, r.End-r.Start+1)
 	input.ReadAt(buff, r.Start)
 
-	newFilePath := "./firstrange.txt"
+	newFilePath := "./" + writeFile
 	newFile, err := os.Create(newFilePath)
 	if err != nil {
 		panic("Failed to create file: " + err.Error())
@@ -128,8 +128,8 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 
 	utils.PanicIf(buff[0] == byte('\n'), fmt.Sprintf("not starting at new line, chunk number = %d", r.Index), nil)
 	if buff[len(buff)-1] != byte('\n') {
-		readRange(r, p17.Path)
-		panic(fmt.Sprintf("not ending at new line, chunk number = %d", r.Index))
+		readRange(r, p17.Path, fmt.Sprintf("chunk-%d", r.Index))
+		// panic(fmt.Sprintf("not ending at new line, chunk number = %d", r.Index))
 	}
 
 	// NOTE: Based on these asserts I can guarantee we are creating the chunks correctly
@@ -173,7 +173,7 @@ func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
 
 	ptr := start
 	utils.PanicIf(buff[start] == newline, "should not be starting a newline", nil)
-	for ptr <= N {
+	for ptr < N {
 		if buff[ptr] == delim {
 			delimIdx = ptr - 1
 			break
@@ -183,8 +183,8 @@ func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
 
 	ptr++ // move past the ';'
 	temp = 0
-	isNeg := buff[ptr] == negative
-	for ptr <= N {
+	// isNeg := buff[ptr] == negative
+	for ptr < N {
 		nb := buff[ptr]
 		if nb == newline {
 			newLineFound = true
@@ -195,9 +195,11 @@ func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
 		}
 		ptr++
 	}
-	ptr++                                               // So that we move past the newline break
-	city := unsafe.String(&buff[start], delimIdx-start) // BUG: This is printing the full line
-	if isNeg {
+	ptr++ // So that we move past the newline break
+	cityLen := delimIdx - start
+	utils.PanicIf(cityLen > N-start, "this shouldn't happen it doesnt make sense", nil)
+	city := unsafe.String(&buff[start], cityLen) // BUG: This is printing the full line
+	if buff[delimIdx+1] == negative {
 		temp *= -1
 	}
 	return temp, city, ptr, delimIdx, newLineFound
