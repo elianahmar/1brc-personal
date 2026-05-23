@@ -70,7 +70,7 @@ func (p1 *P1) collectData(data chan string, measurementChan chan map[string]*mod
 		measurements[city].Max = math.Max(measurements[city].Max, temp)
 		measurements[city].Min = math.Min(measurements[city].Min, temp)
 	}
-	utils.PanicIf(linesProcessed != linesToProcess, fmt.Sprintf("didn't process all lines %d/%d", linesProcessed, linesToProcess))
+	utils.PanicIf(linesProcessed != linesToProcess, fmt.Sprintf("didn't process all lines %d/%d", linesProcessed, linesToProcess), nil)
 
 	measurementChan <- measurements
 	close(measurementChan)

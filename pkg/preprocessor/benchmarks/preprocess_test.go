@@ -175,7 +175,7 @@ func benchmarkUnsafe(b *testing.B) {
 			// process the line itself
 			city, num, found := bytes.Cut(line, delim) // Returns original array. Unsafe is no good here either
 			cityName := utils.BytesToString(city)
-			utils.PanicIf(!found, "bytes not found?")
+			utils.PanicIf(!found, "bytes not found?", nil)
 			temp := utils.PanicE(strconv.ParseFloat(string(num), 64))
 			if _, exists := measurements[cityName]; !exists {
 				measurements[cityName] = &model.Measurement{City: cityName}

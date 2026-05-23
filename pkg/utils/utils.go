@@ -18,9 +18,12 @@ func PanicE[T any](obj T, err error) T {
 	return obj
 }
 
-func PanicIf(cond bool, msg string) {
+func PanicIf(cond bool, msg string, fn func()) {
 	if cond {
-		panic(msg)
+		panic(msg + "\n")
+	}
+	if fn != nil {
+		fn()
 	}
 }
 
@@ -46,4 +49,13 @@ func DayMonthYear() string {
 // Because casting b to string creates a copy of the byte array O(n). With unsafe pointers this becomes O(1)
 func BytesToString(b []byte) string {
 	return unsafe.String(&b[0], len(b))
+}
+
+func PrintMap[T comparable, E any](m map[T]E) {
+	println("\n++++++ PRINTING MAP CONTENTS ++++++\n")
+
+	for k, v := range m {
+		println("key = ", k, "value = ", v)
+	}
+	println("\n++++++ PRINTING MAP CONTENTS ++++++\n")
 }

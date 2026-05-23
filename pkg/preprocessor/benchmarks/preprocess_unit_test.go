@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 	"unsafe"
+
+	"github.com/throwea/1brc-go/pkg/model"
+	"github.com/throwea/1brc-go/pkg/utils"
 )
 
 func Test_SimpleParser(t *testing.T) {
@@ -80,34 +83,34 @@ func Test_ParseNum(t *testing.T) {
 	}
 }
 
-func Test_FindDelimIdx(t *testing.T) {
-	delim := byte(';')
-	parse := func(line []byte) int {
-		L := 0
-		for {
-			nb := line[L]
-			if nb == delim {
-				break
-			}
-			L += 1
-		}
-		return L
-	}
-	line := []byte("Baltimore;12.0")
-	N := len(line)
-	delimIdx := parse(line)
-	city := unsafe.String(&line[0], delimIdx)
-	fmt.Printf("city = %s\n", city)
-	temp, _ := strconv.Atoi(unsafe.String(&line[delimIdx+1], N))
-
-	fmt.Println("temp + ", temp)
-	if !strings.EqualFold(city, "Baltimore") {
-		t.Errorf("city is not correct; expected: Baltimore, actual: %s", city)
-	}
-	if temp != 120 {
-		t.Errorf("temp is not correct; expected: 120, actual: %d", temp)
-	}
-}
+// func Test_FindDelimIdx(t *testing.T) {
+// 	delim := byte(';')
+// 	parse := func(line []byte) int {
+// 		L := 0
+// 		for {
+// 			nb := line[L]
+// 			if nb == delim {
+// 				break
+// 			}
+// 			L += 1
+// 		}
+// 		return L
+// 	}
+// 	line := []byte("Baltimore;12.0\n")
+// 	N := len(line)
+// 	delimIdx := parse(line)
+// 	city := unsafe.String(&line[0], delimIdx)
+// 	fmt.Printf("city = %s\n", city)
+// 	temp, _ := strconv.Atoi(unsafe.String(&line[delimIdx+1], N))
+//
+// 	fmt.Println("temp + ", temp)
+// 	if !strings.EqualFold(city, "Baltimore") {
+// 		t.Errorf("city is not correct; expected: Baltimore, actual: %s", city)
+// 	}
+// 	if temp != 120 {
+// 		t.Errorf("temp is not correct; expected: 120, actual: %d", temp)
+// 	}
+// }
 
 func Test_ParseNumNoConv(t *testing.T) {
 	testCases := []struct {
@@ -197,4 +200,161 @@ func Benchmark_ForLoop(b *testing.B) { // 266.3
 			_ = L
 		}
 	}
+}
+
+func Test_ParseMiddleLine(t *testing.T) {
+	line := []byte("Baltimore;-13.0\nNew York City;-1.0\nChicago;2.0\n")
+
+	temp, city, ptr, delimIdx, newLineFound := ParseLine(16, line, len(line))
+	println(city, 16, delimIdx)
+	if temp != -10 {
+		t.Errorf("wrong temparature, got %d, expected %d\n", temp, -130)
+	} else if city != "New York City" {
+		t.Errorf("wrong city, got %s", city)
+	} else if ptr != 35 {
+		t.Errorf("ptr location is wrong, got %d, expected = %d", ptr, 33)
+	} else if delimIdx != 29 {
+		t.Errorf("delimIdx location is wrong")
+	} else if !newLineFound {
+		t.Errorf("newline not found")
+	}
+}
+
+func Test_ParseSingleLine(t *testing.T) {
+	line := []byte("Baltimore;-13.0\n")
+
+	temp, city, ptr, delimIdx, newLineFound := ParseLine(0, line, len(line))
+	if temp != -130 {
+		t.Errorf("wrong temparature, got %d, expected %d", temp, -130)
+	} else if city != "Baltimore" {
+		t.Errorf("wrong city, got %s", city)
+	} else if ptr != len(line) {
+		t.Errorf("ptr location is wrong")
+	} else if delimIdx != 9 {
+		t.Errorf("delimIdx location is wrong")
+	} else if !newLineFound {
+		t.Errorf("newline not found")
+	}
+}
+
+// TODO: still haven't asserted every range ends with '\n'
+func Test_ParseSingleRange(t *testing.T) {
+	buff := []byte("Baltimore;-13.0\nNew York City;-1.0\nChicago;2.0\n")
+	ranges := model.Range{
+		Start: 0,
+		End:   46,
+	}
+
+	m := processRange(ranges, buff)
+	// First make assertions on the map itself.
+	utils.PrintMap(m)
+	nYTemp, nyok := m["New York City"]
+	chiTemp, cook := m["Chicago"]
+	balTemp, bok := m["Baltimore"]
+	if !nyok {
+		t.Errorf("new york not found")
+	} else if !cook {
+		t.Errorf("chicago not found")
+	} else if !bok {
+		t.Errorf("baltimore not found")
+	} else if nYTemp.Temps != -10 {
+		t.Errorf("ny temp not correct")
+	} else if chiTemp.Temps != 20 {
+		t.Errorf("ny temp not correct")
+	} else if balTemp.Temps != -130 {
+		t.Errorf("ny temp not correct")
+	}
+}
+
+// func Test_ParseMultipleRanges(t *testing.T) {
+// 	buff := []byte("Baltimore;-13.0\nNew York City;-1.0\nChicago;2.0\n")
+// 	ranges := []model.Range{
+// 		{
+// 			Start: 0,
+// 			End:   15,
+// 		},
+// 		{
+// 			Start: 16,
+// 			End:   34,
+// 		},
+// 		{
+// 			Start: 35,
+// 			End:   46,
+// 		},
+// 	}
+//
+// 	temp, city, ptr, delimIdx, newLineFound := processRange(buff)
+// 	//First make assertions on the map itself.
+// 	// newYork, ok :=
+// }
+
+func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
+	var (
+		delim                = byte(';')
+		newline              = byte('\n')
+		zero, nine, negative = byte('0'), byte('9'), byte('-')
+		temp, delimIdx       = 0, 0
+		newLineFound         = false
+	)
+
+	ptr := start
+	for ptr < N {
+		if buff[ptr] == delim {
+			delimIdx = ptr
+			break
+		}
+		ptr++
+	}
+
+	ptr++ // move past the ';'
+	temp = 0
+	isNeg := buff[ptr] == negative
+	for ptr < N {
+		nb := buff[ptr]
+		if nb == newline {
+			newLineFound = true
+			break
+		}
+		if zero <= nb && nb <= nine {
+			temp = (temp * 10) + int(nb-zero)
+		}
+		ptr++
+	}
+	ptr++                                               // So that we move past the newline break
+	city := unsafe.String(&buff[start], delimIdx-start) // BUG: This is printing the full line
+	// utils.PanicIf(delimIdx-start <= 0, "indexes are off")
+	// utils.PanicIf(strings.ContainsRune(city, rune(';')), city+" contains delimeter")
+	if isNeg {
+		temp *= -1
+	}
+	return temp, city, ptr, delimIdx, newLineFound
+}
+
+func processRange(r model.Range, buff []byte) map[string]*model.MeasurementInt {
+	N, start := 0, 0
+
+	localMeasurement := make(map[string]*model.MeasurementInt, 512)
+	ptr := 0
+	N = len(buff)
+	for ptr < N {
+		start = ptr
+		temp, city, nlIdx, dlIdx, nlFound := ParseLine(ptr, buff, N)
+		if !nlFound {
+			break
+		}
+		ptr = nlIdx
+
+		measurement, exists := localMeasurement[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
+		if !exists {
+			// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
+			cityName := string(buff[start:dlIdx])
+			measurement = &model.MeasurementInt{City: cityName}
+			localMeasurement[cityName] = measurement
+		}
+		measurement.Temps += temp
+		measurement.Count += 1
+		measurement.Max = max(measurement.Max, temp)
+		measurement.Min = min(measurement.Min, temp)
+	}
+	return localMeasurement
 }

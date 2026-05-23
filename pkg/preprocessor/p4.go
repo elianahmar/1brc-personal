@@ -44,7 +44,7 @@ func (p4 *P4) Compute() map[string]*model.Measurement { // 117 seconds. Fastest 
 		// process the line itself
 		city, num, found := bytes.Cut(line, delim)
 		cityName := string(city)
-		utils.PanicIf(!found, "bytes not found?")
+		utils.PanicIf(!found, "bytes not found?", nil)
 		temp := utils.PanicE(strconv.ParseFloat(string(num), 64))
 		if _, exists := measurements[cityName]; !exists {
 			measurements[cityName] = &model.Measurement{City: cityName}
