@@ -63,6 +63,15 @@ func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
 		for r := range rChan { // We are receiving all of the ranges. I validated with prints. saw 3290
 			wg.Add(1)
 			go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
+				defer func() {
+					if err := recover(); err != nil {
+						fmt.Printf("\n\n ERROR START: ===== \n\n")
+						fmt.Printf("%v\n", r)
+						fmt.Printf("%v", err)
+						fmt.Printf("\n\n ERROR END: ===== \n\n")
+						readRange(r, p17.Path, fmt.Sprintf("chunk-%d", r.Index))
+					}
+				}()
 				p17.processRange(r, mChan, file, wg)
 			}(r, mChan, file, wg)
 		}
@@ -127,11 +136,6 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 	file.ReadAt(buff, r.Start)
 
 	utils.PanicIf(buff[0] == byte('\n'), fmt.Sprintf("not starting at new line, chunk number = %d", r.Index), nil)
-	if buff[len(buff)-1] != byte('\n') {
-		readRange(r, p17.Path, fmt.Sprintf("chunk-%d", r.Index))
-		// panic(fmt.Sprintf("not ending at new line, chunk number = %d", r.Index))
-	}
-
 	// NOTE: Based on these asserts I can guarantee we are creating the chunks correctly
 	// So if every buffer starts at a character and ends with a newline, then we should be checking every index up to the end
 	// So if we have 10 bytes in the buffer then our pointer needs to [0, 9]
