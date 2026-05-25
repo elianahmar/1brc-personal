@@ -146,7 +146,7 @@ func (p17 *P17) processRange(
 		}
 		// Flip sign if needed
 		if isNeg {
-			temp *= 1
+			temp *= -1
 		}
 
 		if ptr >= N {
@@ -165,6 +165,7 @@ func (p17 *P17) processRange(
 			measurement = &model.MeasurementInt{City: cityName}
 			localMeasurement[cityName] = measurement
 		}
+		// utils.PanicIf(temp == 0.0, "temp not parsed correctly", nil)
 
 		measurement.Temps += temp
 		measurement.Count++
