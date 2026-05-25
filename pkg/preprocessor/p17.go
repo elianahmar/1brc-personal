@@ -144,13 +144,14 @@ func (p17 *P17) processRange(
 			}
 			ptr++
 		}
-		// Flip sign if needed
-		if isNeg {
-			temp *= -1
-		}
 
 		if ptr >= N {
 			break
+		}
+
+		// Flip sign if needed
+		if isNeg {
+			temp *= -1
 		}
 
 		ptr++ // move past newline
