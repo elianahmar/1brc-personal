@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 type Compute interface {
 	Compute() map[string]*Measurement
 }
@@ -18,6 +20,10 @@ type MeasurementInt struct {
 	Min      int
 	Max      int
 	Avg      float64
+}
+
+func (p *Predicted) Print() {
+	println(fmt.Sprintf("City = %s, min/max/avg = %s/%s/%s", p.City, p.Min, p.Max, p.Avg))
 }
 
 type Actual struct {
