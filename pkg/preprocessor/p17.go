@@ -107,7 +107,7 @@ func (p17 *P17) processRange(
 	if err != nil && err != io.EOF {
 		panic(err)
 	}
-	buff = buff[:n]
+	buff = buff[:n] // TODO: why do I need this. COmmenting this out fails my solution
 
 	const (
 		semicolon = byte(';')
@@ -132,6 +132,7 @@ func (p17 *P17) processRange(
 		// Move the ptr forward off the semicolon
 		ptr++
 		isNeg := buff[ptr] == minus
+		ptr++
 		temp := 0
 		for ptr < N {
 			nb := buff[ptr]
@@ -139,7 +140,7 @@ func (p17 *P17) processRange(
 				break
 			}
 			if zero <= nb && nb <= nine {
-				temp = (temp * 10) + int(nb-zero)
+				temp = temp*10 + int(nb-zero)
 			}
 			ptr++
 		}
@@ -160,6 +161,7 @@ func (p17 *P17) processRange(
 		measurement, exists := localMeasurement[city]
 		if !exists {
 			cityName := string(buff[start:cityEnd])
+			// println(cityName, temp)
 			measurement = &model.MeasurementInt{City: cityName}
 			localMeasurement[cityName] = measurement
 		}

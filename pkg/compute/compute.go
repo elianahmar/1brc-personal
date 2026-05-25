@@ -44,15 +44,10 @@ func ComputeAvgStrConv(measurements map[string]*model.MeasurementInt) map[string
 			City: city,
 			Min:  convertToStr(measurement.Min),
 			Max:  convertToStr(measurement.Max),
-			Avg:  convertToStrImproved(avg),
+			Avg:  fmt.Sprintf("%.1f", avg),
 		}
 	}
 	return predictions
-}
-
-// TODO: unit test...
-func convertToStrImproved(num float64) string {
-	return fmt.Sprintf("%.1f", num)
 }
 
 func convertToStr(num int) string {
