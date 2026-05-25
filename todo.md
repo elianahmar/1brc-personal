@@ -2,12 +2,13 @@
 - Have final validation being written as a json object. So I can jq over it
 - Aim for under <3 seconds
 - Gonna need block/mutex profiling if I wanna dig deeper
-- Get single pass parsing working
+- Debug the single pass parsing
   - Write a single range to a file and see what the data looks like. DONE
-  - Let's see exactly where we trigger the unsafe
+  - Let's see exactly where we trigger the unsafe. DONE
   - ```runtime error: unsafe.String: len out of range```
   - Write a single range to a file and see what the data looks like. DONE
-  - Write a single range to a file and see what the data looks like. DONE
+  - How do I get this working... If we get an unsafe string out of bounds
+    - Maybe I could capture the start index and capture the len as well
 
 - Figure out why "Flores, Peten" is not found?
   - For this, make a unit which reads the whole file

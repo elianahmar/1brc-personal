@@ -1,14 +1,13 @@
 package preprocessor
 
 import (
-	"fmt"
+	"io"
 	"os"
 	"sync"
 	"unsafe"
 
 	"github.com/throwea/1brc-go/pkg/files"
 	"github.com/throwea/1brc-go/pkg/model"
-	"github.com/throwea/1brc-go/pkg/utils"
 )
 
 type P17 struct {
@@ -20,32 +19,6 @@ func NewP17(path string) *P17 {
 	return &P17{
 		Path: path,
 	}
-}
-
-// WARN: the range isn't inclusive... that's why + 1 is needed on the buffer
-// Also, the very last line always includes a newline break
-// So for a single pass parse, I need to scan the whole line and if their are no more bytes
-// Just break.
-func readRange(r model.Range, path string, writeFile string) {
-	input := utils.PanicE(os.Open(path))
-	defer input.Close()
-	buff := make([]byte, r.End-r.Start+1)
-	input.ReadAt(buff, r.Start)
-
-	newFilePath := "./" + writeFile
-	newFile, err := os.Create(newFilePath)
-	if err != nil {
-		panic("Failed to create file: " + err.Error())
-	}
-	defer newFile.Close()
-
-	length, err := newFile.Write(buff)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("File name: %s\n", newFile.Name())
-	fmt.Printf("File length: %d bytes\n", length)
-	return
 }
 
 func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
@@ -63,15 +36,6 @@ func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
 		for r := range rChan { // We are receiving all of the ranges. I validated with prints. saw 3290
 			wg.Add(1)
 			go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
-				defer func() {
-					if err := recover(); err != nil {
-						fmt.Printf("\n\n ERROR START: ===== \n\n")
-						fmt.Printf("%v\n", r)
-						fmt.Printf("%v", err)
-						fmt.Printf("\n\n ERROR END: ===== \n\n")
-						readRange(r, p17.Path, fmt.Sprintf("chunk-%d", r.Index))
-					}
-				}()
 				p17.processRange(r, mChan, file, wg)
 			}(r, mChan, file, wg)
 		}
@@ -128,83 +92,82 @@ func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
 	return finalMeasure
 }
 
-func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
+func (p17 *P17) processRange(
+	r model.Range,
+	mChan chan map[string]*model.MeasurementInt,
+	file *os.File,
+	wg *sync.WaitGroup,
+) {
 	defer wg.Done()
 
 	localMeasurement := make(map[string]*model.MeasurementInt, 512)
+
 	buff := make([]byte, r.End-r.Start+1)
-	file.ReadAt(buff, r.Start)
+	n, err := file.ReadAt(buff, r.Start)
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
+	buff = buff[:n]
 
-	utils.PanicIf(buff[0] == byte('\n'), fmt.Sprintf("not starting at new line, chunk number = %d", r.Index), nil)
-	// NOTE: Based on these asserts I can guarantee we are creating the chunks correctly
-	// So if every buffer starts at a character and ends with a newline, then we should be checking every index up to the end
-	// So if we have 10 bytes in the buffer then our pointer needs to [0, 9]
+	const (
+		semicolon = byte(';')
+		newline   = byte('\n')
+		period    = byte('.')
+		minus     = byte('-')
+		zero      = byte('0')
+		nine      = byte('9')
+	)
 
-	N, start := len(buff), 0
+	N := len(buff)
 	ptr := 0
+	/// Parser code /////
 	for ptr < N {
-		start = ptr
-		temp, city, nlIdx, dlIdx, nlFound := ParseLine(ptr, buff, N)
-		if !nlFound {
+		// Read up to the ';'
+		start := ptr
+		for buff[ptr] != semicolon {
+			ptr++
+		}
+		cityEnd := ptr
+		city := unsafe.String(&buff[start], ptr-start)
+		// Move the ptr forward off the semicolon
+		ptr++
+		isNeg := buff[ptr] == minus
+		temp := 0
+		for ptr < N {
+			nb := buff[ptr]
+			if nb == newline {
+				break
+			}
+			if zero <= nb && nb <= nine {
+				temp = (temp * 10) + int(nb-zero)
+			}
+			ptr++
+		}
+		// Flip sign if needed
+		if isNeg {
+			temp *= 1
+		}
+
+		if ptr >= N {
 			break
 		}
-		ptr = nlIdx + 1
 
-		// fmt.Println(fmt.Sprintf("%s, [%d, %d]", city, start, dlIdx))
-		measurement, exists := localMeasurement[city] // Lookup trick. city underlying byte array can change but we can use it for lookup
+		ptr++ // move past newline
+
+		/// Parser code /////
+
+		// 3. Update local map
+		measurement, exists := localMeasurement[city]
 		if !exists {
-			// NOTE: Was casting string to string which doesn't copy. That's why map data was wrong
-			cityName := string(buff[start:dlIdx])
+			cityName := string(buff[start:cityEnd])
 			measurement = &model.MeasurementInt{City: cityName}
 			localMeasurement[cityName] = measurement
 		}
+
 		measurement.Temps += temp
-		measurement.Count += 1
+		measurement.Count++
 		measurement.Max = max(measurement.Max, temp)
 		measurement.Min = min(measurement.Min, temp)
 	}
 	mChan <- localMeasurement
-}
-
-func ParseLine(start int, buff []byte, N int) (int, string, int, int, bool) {
-	var (
-		delim                = byte(';')
-		newline              = byte('\n')
-		zero, nine, negative = byte('0'), byte('9'), byte('-')
-		temp, delimIdx       = 0, 0
-		newLineFound         = false
-	)
-
-	ptr := start
-	utils.PanicIf(buff[start] == newline, "should not be starting a newline", nil)
-	for ptr < N {
-		if buff[ptr] == delim {
-			delimIdx = ptr - 1
-			break
-		}
-		ptr++
-	}
-
-	ptr++ // move past the ';'
-	temp = 0
-	// isNeg := buff[ptr] == negative
-	for ptr < N {
-		nb := buff[ptr]
-		if nb == newline {
-			newLineFound = true
-			break
-		}
-		if zero <= nb && nb <= nine {
-			temp = (temp * 10) + int(nb-zero)
-		}
-		ptr++
-	}
-	ptr++ // So that we move past the newline break
-	cityLen := delimIdx - start
-	utils.PanicIf(cityLen > N-start, "this shouldn't happen it doesnt make sense", nil)
-	city := unsafe.String(&buff[start], cityLen) // BUG: This is printing the full line
-	if buff[delimIdx+1] == negative {
-		temp *= -1
-	}
-	return temp, city, ptr, delimIdx, newLineFound
 }
