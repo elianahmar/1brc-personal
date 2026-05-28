@@ -92,12 +92,7 @@ func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 4.5 seconds.
 	return finalMeasure
 }
 
-func (p17 *P17) processRange(
-	r model.Range,
-	mChan chan map[string]*model.MeasurementInt,
-	file *os.File,
-	wg *sync.WaitGroup,
-) {
+func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	localMeasurement := make(map[string]*model.MeasurementInt, 512)
@@ -144,6 +139,7 @@ func (p17 *P17) processRange(
 			}
 			ptr++
 		}
+		temp = int(temp)
 
 		if ptr >= N {
 			break
@@ -155,18 +151,16 @@ func (p17 *P17) processRange(
 		}
 
 		ptr++ // move past newline
-
 		/// Parser code /////
 
 		// 3. Update local map
 		measurement, exists := localMeasurement[city]
 		if !exists {
 			cityName := string(buff[start:cityEnd])
-			// println(cityName, temp)
-			measurement = &model.MeasurementInt{City: cityName}
+			measurement = &model.MeasurementInt{City: cityName, Max: temp, Min: temp, Count: 1, Temps: temp}
 			localMeasurement[cityName] = measurement
+			continue
 		}
-		// utils.PanicIf(temp == 0.0, "temp not parsed correctly", nil)
 
 		measurement.Temps += temp
 		measurement.Count++
