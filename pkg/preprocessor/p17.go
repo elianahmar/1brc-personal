@@ -127,10 +127,10 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 		city := unsafe.String(&buff[start], ptr-start)
 		// Move the ptr forward off the semicolon
 		ptr++
-		isNeg := buff[ptr] == minus
 		sign := 1
-		if isNeg {
+		if buff[ptr] == minus {
 			sign = -1
+			ptr++
 		}
 		temp := 0
 		for ptr < N {
@@ -144,9 +144,6 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 			ptr++
 		}
 
-		if ptr >= N {
-			break
-		}
 		temp *= sign
 
 		ptr++ // move past newline
