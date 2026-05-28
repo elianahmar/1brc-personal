@@ -111,12 +111,11 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 		minus     = byte('-')
 		zero      = byte('0')
 		nine      = byte('9')
-		temp      = 0
 	)
 
 	N := len(buff)
 	ptr := 0
-	/// Parser code /////
+	temp := 0
 	for ptr < N {
 		// Read up to the ';'
 		start := ptr
@@ -127,35 +126,26 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 		city := unsafe.String(&buff[start], ptr-start)
 		// Move the ptr forward off the semicolon
 		ptr++
-		sign := 1
-		if buff[ptr] == minus {
-			sign = -1
-			ptr++
-		}
-		temp := 0
+		isNeg := buff[ptr] == minus
+		temp = 0
 		for ptr < N {
 			nb := buff[ptr]
-			if nb == newline {
-				break
-			}
 			if zero <= nb && nb <= nine {
 				temp = temp*10 + int(nb-zero)
+			} else if nb == newline {
+				break
 			}
 			ptr++
 		}
-
-		temp *= sign
-
+		if isNeg {
+			temp *= -1
+		}
 		ptr++ // move past newline
-		/// Parser code /////
-
-		// 3. Update local map
 		measurement, exists := localMeasurement[city]
 		if !exists {
 			cityName := string(buff[start:cityEnd])
-			measurement = &model.MeasurementInt{City: cityName, Max: temp, Min: temp, Count: 1, Temps: temp}
+			measurement = &model.MeasurementInt{City: cityName}
 			localMeasurement[cityName] = measurement
-			continue
 		}
 
 		measurement.Temps += temp
