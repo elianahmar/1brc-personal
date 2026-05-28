@@ -37,8 +37,7 @@ func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 3.8 seconds
 	file, _ := os.Open(p17.Path)
 
 	go files.ChunkFileAsync(p17.Path, rChan)
-	// Separate go routines for each range. Each go routine will build a map internally
-	// and push it to a channel of maps which are processed on main thread
+
 	go func(mChan chan map[string]*model.MeasurementInt, file *os.File) {
 		wg := &sync.WaitGroup{}
 		for r := range rChan { // We are receiving all of the ranges. I validated with prints. saw 3290
