@@ -37,6 +37,7 @@ func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 	utils.PanicE(struct{}{}, json.Unmarshal(content, &validation))
 	errs := make([]error, 0)
 
+	// utils.PrintMap(measurements)
 	cities := slices.Sorted(maps.Keys(validation))
 
 	for _, city := range cities { // NOTE: don't think this is right?
@@ -61,6 +62,7 @@ func ValidateCorrectnessInt(measurements map[string]*model.Predicted) {
 			citiesPassed += 1
 			continue
 		}
+		fmt.Println(Errors(errs))
 		citiesFailed += 1
 	}
 
