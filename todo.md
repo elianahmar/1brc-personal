@@ -1,21 +1,6 @@
 ### TODO
-- Have final validation being written as a json object. So I can jq over it
-- Aim for under <3 seconds
-- Gonna need block/mutex profiling if I wanna dig deeper
-- Debug the single pass parsing
-  - Write a single range to a file and see what the data looks like. DONE
-  - Let's see exactly where we trigger the unsafe. DONE
-  - ```runtime error: unsafe.String: len out of range```
-  - Write a single range to a file and see what the data looks like. DONE
-  - How do I get this working... If we get an unsafe string out of bounds
-    - Maybe I could capture the start index and capture the len as well
-
-- Figure out why "Flores, Peten" is not found?
-  - For this, make a unit which reads the whole file
-  - Parses every line and panics if we have a city Title "Flores, Peten". Copy it from terminal since it's a special character
-- hyper parameter tuning script + config so I can get best performance
+- "hyper parameter" tuning script + config so I can get best performance
   - Just create a json file. With each configurable option
-- On main thread I can spawn a go routine which just waits for recover and writes the file if we notice a panic that happened in one of the go routines
 
 ### Constraints
 - Can only use std library packages
@@ -43,6 +28,20 @@
 - Convert floating point to ints and do conversion once at the end
 - Aim for under <10 seconds
 - Fix the under by .1 issue. Thinking it's an issue with truncating. Used "%.1f". with formatting.
-- Benchmark all of the parts of my program. 
+- Benchmark all of the parts of my program. -> DONE
   - Benchmark the file reading
   - Decompose the different parts down in the benchmark so I can compare performance
+- Figure out why "Flores, Peten" is not found? -> DONE
+  - For this, make a unit which reads the whole file
+  - Parses every line and panics if we have a city Title "Flores, Peten". Copy it from terminal since it's a special character
+- Have final validation being written as a json object. So I can jq over it -> DONE
+- Aim for under <5 seconds -> DONE. 3.88 fastest recorded time
+
+- Debug the single pass parsing -> DONE
+  - Write a single range to a file and see what the data looks like. DONE
+  - Let's see exactly where we trigger the unsafe. DONE
+  - ```runtime error: unsafe.String: len out of range```
+  - Write a single range to a file and see what the data looks like. DONE
+  - How do I get this working... 
+    - Maybe I could capture the start index and capture the len as well
+- On main thread I can spawn a go routine which just waits for recover and writes the file if we notice a panic that happened in one of the go routines -> DONE
