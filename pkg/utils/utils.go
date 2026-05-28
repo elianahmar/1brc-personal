@@ -54,8 +54,8 @@ func BytesToString(b []byte) string {
 func PrintMap[T comparable, E any](m map[T]E) {
 	println("\n++++++ PRINTING MAP CONTENTS ++++++\n")
 
-	for k, v := range m {
-		println("key = ", k, "value = ", v)
+	for _, v := range m {
+		fmt.Println(v)
 	}
 	println("\n++++++ PRINTING MAP CONTENTS ++++++\n")
 }

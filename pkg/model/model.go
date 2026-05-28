@@ -22,10 +22,6 @@ type MeasurementInt struct {
 	Avg      float64
 }
 
-func (m *MeasurementInt) String() string {
-	return fmt.Sprintf("City = %s, min/max/avg = %d/%d/%.1f", m.City, m.Min, m.Max, m.Avg)
-}
-
 func (m *MeasurementInt) Print() {
 	println(fmt.Sprintf("City = %s, min/max/avg = %d/%d/%.1f", m.City, m.Min, m.Max, m.Avg))
 }

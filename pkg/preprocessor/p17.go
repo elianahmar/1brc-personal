@@ -102,7 +102,7 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 	if err != nil && err != io.EOF {
 		panic(err)
 	}
-	buff = buff[:n] // TODO: why do I need this. COmmenting this out fails my solution
+	buff = buff[:n] // NOTE: need to do this because it isn't guaranteed that I'll read in all of the bytes
 
 	const (
 		semicolon = byte(';')
@@ -111,6 +111,7 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 		minus     = byte('-')
 		zero      = byte('0')
 		nine      = byte('9')
+		temp      = 0
 	)
 
 	N := len(buff)
@@ -127,7 +128,10 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 		// Move the ptr forward off the semicolon
 		ptr++
 		isNeg := buff[ptr] == minus
-		ptr++
+		sign := 1
+		if isNeg {
+			sign = -1
+		}
 		temp := 0
 		for ptr < N {
 			nb := buff[ptr]
@@ -139,16 +143,11 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 			}
 			ptr++
 		}
-		temp = int(temp)
 
 		if ptr >= N {
 			break
 		}
-
-		// Flip sign if needed
-		if isNeg {
-			temp *= -1
-		}
+		temp *= sign
 
 		ptr++ // move past newline
 		/// Parser code /////
