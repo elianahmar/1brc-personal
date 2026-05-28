@@ -43,6 +43,14 @@ func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 3.8 seconds
 		for r := range rChan { // We are receiving all of the ranges. I validated with prints. saw 3290
 			wg.Add(1)
 			go func(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File, wg *sync.WaitGroup) {
+				defer func() {
+					if err := recover(); err != nil {
+						fmt.Printf("\n\n ERROR START: ===== \n\n")
+						fmt.Printf("%v\n", r)
+						fmt.Printf("%v", err)
+						fmt.Printf("\n\n ERROR END: ===== \n\n")
+					}
+				}()
 				p17.processRange(r, mChan, file, wg)
 			}(r, mChan, file, wg)
 		}
