@@ -17,28 +17,13 @@ func ComputeAvg(measurements map[string]*model.Measurement) {
 	fmt.Println("Computed the averages. Time to validate")
 }
 
-// NOTE: I can just convert to string then simply put a period before smallest digit. Done. Try that if computations don't work
-//
-//	func ComputeAvgInt(measurements map[string]*model.MeasurementInt) map[string]*model.Predicted {
-//		predictions := make(map[string]*model.Predicted)
-//		for city, measurement := range measurements {
-//			avg := math.Round(float64(measurement.Temps) / float64(measurement.Count))
-//			avg /= 10
-//			predictions[city] = &model.Predicted{
-//				Min: utils.TruncateNaive(float64(measurement.Min)/10.0, 0.1),
-//				Max: utils.TruncateNaive(float64(measurement.Max)/10.0, 0.1),
-//				Avg: utils.TruncateNaive(math.Round(avg), 0.1),
-//			}
-//		}
-//		return predictions
-//	}
-
 // NOTE: If temps is positive let's ceil the Temps/Avg, else floor it
 func ComputeAvgStrConv(measurements map[string]*model.MeasurementInt) map[string]*model.Predicted {
 	predictions := make(map[string]*model.Predicted)
-	// fmt.Println(printFullMeasurements(measurements))
+	fmt.Println("\n\n======= COMPUTE ========\n\n")
 	for city, measurement := range measurements {
 		// NOTE: for final answers that have 0 as significand. I need to prepend zero to that result
+		measurement.Print()
 		avg := float64(measurement.Temps) / float64(measurement.Count) / 10.0
 		predictions[city] = &model.Predicted{
 			City: city,
@@ -47,6 +32,7 @@ func ComputeAvgStrConv(measurements map[string]*model.MeasurementInt) map[string
 			Avg:  fmt.Sprintf("%.1f", avg),
 		}
 	}
+	fmt.Println("\n\n======= COMPUTE ========\n\n")
 	return predictions
 }
 
@@ -61,15 +47,6 @@ func convertToStr(num int) string {
 			res.WriteByte('.')
 		}
 		res.WriteByte(numStr[i])
-	}
-	return res.String()
-}
-
-func printFullMeasurements(measurements map[string]*model.MeasurementInt) string {
-	res := strings.Builder{}
-	for city, mment := range measurements {
-		line := fmt.Sprintf("City = %s, Min = %d, Max = %d, Count = %d, Temps = %d\n", city, mment.Min, mment.Max, mment.Count, mment.Temps)
-		res.WriteString(line)
 	}
 	return res.String()
 }
