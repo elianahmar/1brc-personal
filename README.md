@@ -2,7 +2,7 @@
 
 My implementation of the 1BRC Challenge.
 
-Best recorded time: **3.88 seconds** using the solution from `p17.go`.
+Best recorded time: **3.88 seconds** using the solution from `p17.go`. I'm running on an M3 macbook pro with 18GB of memory.
 
 Here is the link to get started with the challenge
 
