@@ -50,6 +50,7 @@ func (p17 *P17) Compute() map[string]*model.MeasurementInt { // 3.8 seconds
 						fmt.Printf("%v\n", r)
 						fmt.Printf("%v", err)
 						fmt.Printf("\n\n ERROR END: ===== \n\n")
+						// readRange(r, p17.Path, fmt.Sprintf("chunk-%d", r.Index))
 					}
 				}()
 				p17.processRange(r, mChan, file, wg)
@@ -93,6 +94,12 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 		panic(err)
 	}
 	buff = buff[:n] // NOTE: need to do this because it isn't guaranteed that I'll read in all of the bytes
+
+	file.ReadAt(buff, r.Start)
+
+	// NOTE: Based on these asserts I can guarantee we are creating the chunks correctly
+	// So if every buffer starts at a character and ends with a newline, then we should be checking every index up to the end
+	// So if we have 10 bytes in the buffer then our pointer needs to [0, 9]
 
 	ptr := 0
 	temp := 0
