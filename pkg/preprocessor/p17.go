@@ -95,8 +95,6 @@ func (p17 *P17) processRange(r model.Range, mChan chan map[string]*model.Measure
 	}
 	buff = buff[:n] // NOTE: need to do this because it isn't guaranteed that I'll read in all of the bytes
 
-	file.ReadAt(buff, r.Start)
-
 	// NOTE: Based on these asserts I can guarantee we are creating the chunks correctly
 	// So if every buffer starts at a character and ends with a newline, then we should be checking every index up to the end
 	// So if we have 10 bytes in the buffer then our pointer needs to [0, 9]
