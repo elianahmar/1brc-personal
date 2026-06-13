@@ -15,11 +15,6 @@ import (
 	"github.com/throwea/1brc-go/pkg/validator"
 )
 
-// TODO:
-// - Optional. Add some command line args for channel size
-// - append date to cpu.prof, mem.prof so I have multiple dumps to see progress -> DONE
-// - Move the dumps to directories that are titled with day month year, then append the seconds so we can see clearly
-
 func main() {
 	// Start CPU and Memory Profiling
 	// runtime.SetCPUProfileRate(1)

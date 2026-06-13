@@ -23,7 +23,6 @@ func NewP9(path string) *P9 {
 }
 
 func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 44 seconds. New Record
-	// Inlining this function to keep everything on the stack
 	numByte := make([]byte, 0, 8)
 	parse := func(num []byte) (int, error) {
 		numByte = numByte[:0] // clear the array
@@ -62,7 +61,3 @@ func (p9 *P9) Compute() map[string]*model.MeasurementInt { // 44 seconds. New Re
 	}
 	return measurements
 }
-
-// NOTE: Personal note about floating point representation in golang
-// for float32, [1][8][23] => sign, exponent, fraction respectively
-// for float64, [1][11][52] => sign, exponent, fraction respectively

@@ -60,7 +60,3 @@ func (p8 *P8) Compute() map[string]*model.MeasurementInt { // 44 seconds. Twice 
 	}
 	return measurements
 }
-
-// NOTE: Personal note about floating point representation in golang
-// for float32, [1][8][23] => sign, exponent, fraction respectively
-// for float64, [1][11][52] => sign, exponent, fraction respectively

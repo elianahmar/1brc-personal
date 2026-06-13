@@ -16,11 +16,6 @@ type P4 struct {
 	ChanSize int
 }
 
-type lineData struct {
-	City string
-	Temp float64
-}
-
 func NewP4(path string, chansize int) *P4 {
 	return &P4{
 		Path:     path,

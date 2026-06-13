@@ -74,13 +74,8 @@ func (p10 *P10) Compute() map[string]*model.MeasurementInt { // 38 seconds.
 		}
 		measurement.Temps += temp
 		measurement.Count += 1
-		// PERF: Would min and max work on the strings themselves?
 		measurement.Max = max(measurement.Max, temp)
 		measurement.Min = min(measurement.Min, temp)
 	}
 	return measurements
 }
-
-// NOTE: Personal note about floating point representation in golang
-// for float32, [1][8][23] => sign, exponent, fraction respectively
-// for float64, [1][11][52] => sign, exponent, fraction respectively

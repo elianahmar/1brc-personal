@@ -64,7 +64,6 @@ func (p13 *P13) Compute() map[string]*model.MeasurementInt { // 12 seconds.
 	return finalMeasure
 }
 
-// TODO: if this is slow don't tie this to the object
 func (p13 *P13) processRange(r model.Range, mChan chan map[string]*model.MeasurementInt, file *os.File) {
 	numByte := make([]byte, 0, 8) // TODO: Sync Pool this?
 	delim, period := byte(';'), byte('.')
